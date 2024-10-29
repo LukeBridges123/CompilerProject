@@ -32,14 +32,19 @@ tests: $(PROJECT)
 # Always run the tests, even if nothing has changed
 .PHONY: tests
 
-# List any files here that should trigger full recompilation when they change.
+# List header files here that should trigger full recompilation when they change.
 KEY_FILES := ASTNode.hpp SymbolTable.hpp Error.hpp
+# List source files here
+SOURCE := $(PROJECT).o ASTNode.o
 
-$(PROJECT):	$(PROJECT).cpp $(KEY_FILES)
-	$(CXX) $(CFLAGS) $(PROJECT).cpp ASTNode.cpp -o $(PROJECT)
+$(PROJECT):	$(SOURCE) $(KEY_FILES)
+	$(CXX) $(CFLAGS) -o $(PROJECT) $(SOURCE)
+
+%.o: %.cpp
+	$(CXX) -c $(CFLAGS) -o $@ $<
 
 clean:
-	rm -f $(PROJECT) source/*.o tests/current/output-*.txt
+	rm -f $(PROJECT) *.o tests/current/output-*.txt
 
 # Debugging information
 print-%: ; @echo '$(subst ','\'',$*=$($*))'
