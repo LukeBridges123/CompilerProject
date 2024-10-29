@@ -179,13 +179,13 @@ private:
     return lhs;
   }
 
-  ASTNode ParseNegate(){
+  ASTNode ParseNegate() {
     auto lhs = std::make_unique<ASTNode>(ASTNode::NUMBER, -1);
     auto rhs = ParseTerm();
     return ASTNode(ASTNode::OPERATION, "*", std::move(*lhs), std::move(rhs));
   }
 
-  ASTNode ParseNOT(){
+  ASTNode ParseNOT() {
     auto rhs = ParseTerm();
     return ASTNode(ASTNode::OPERATION, "!", std::move(rhs));
   }
@@ -253,7 +253,7 @@ private:
         }
       }
     } else {
-      node.AddChild(ParseExpr()); 
+      node.AddChild(ParseExpr());
     }
     ExpectToken(Lexer::ID_CLOSE_PARENTHESIS);
     ExpectToken(Lexer::ID_ENDLINE);
@@ -291,7 +291,7 @@ private:
 
     ExpectToken(Lexer::ID_CLOSE_PARENTHESIS);
 
-    if (IfToken(Lexer::ID_ENDLINE)){
+    if (IfToken(Lexer::ID_ENDLINE)) {
       return node;
     }
 
@@ -306,7 +306,7 @@ private:
       return ParseScope();
     case Lexer::ID_VAR:
       return ParseDecl();
-    case Lexer::ID_ID: 
+    case Lexer::ID_ID:
     case Lexer::ID_NUMBER: {
       ASTNode node = ParseExpr();
       ExpectToken(Lexer::ID_ENDLINE);
