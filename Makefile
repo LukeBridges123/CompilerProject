@@ -36,7 +36,7 @@ tests: $(PROJECT)
 KEY_FILES := ASTNode.hpp SymbolTable.hpp Error.hpp
 
 $(PROJECT):	$(PROJECT).cpp $(KEY_FILES)
-	$(CXX) $(CFLAGS) $(PROJECT).cpp -o $(PROJECT)
+	$(CXX) $(CFLAGS) $(PROJECT).cpp ASTNode.cpp -o $(PROJECT)
 
 clean:
 	rm -f $(PROJECT) source/*.o tests/current/output-*.txt

@@ -18,8 +18,7 @@ template <typename... Ts>
 }
 
 template <typename... Ts>
-[[noreturn]] void ErrorUnexpected(Token const &token,
-                                  [[maybe_unused]] Ts... expected) {
+[[noreturn]] void ErrorUnexpected(Token const &token, Ts... expected) {
   std::cerr << "ERROR (line " << token.line_id << "): ";
   std::cerr << "Unexpected token '" << token.lexeme << "'"
             << " of type " << Lexer::TokenName(token) << std::endl;
@@ -39,5 +38,3 @@ template <typename... Ts> [[noreturn]] void ErrorNoLine(Ts... message) {
   std::cerr << std::endl;
   exit(1);
 }
-
-// TODO: add an "Unexpected token" error
