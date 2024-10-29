@@ -1,25 +1,26 @@
 #include "ASTNode.hpp"
 
-std::optional<double> ASTNode::Run(SymbolTable &symbols) {
+
+std::optional<double> ASTNode::Emit(SymbolTable &symbols) {
   switch (type) {
   case EMPTY:
     return std::nullopt;
   case SCOPE:
-    RunScope(symbols);
+    EmitScope(symbols);
     return std::nullopt;
   case ASSIGN:
-    return RunAssign(symbols);
+    return EmitAssign(symbols);
   case IDENTIFIER:
-    return RunIdentifier(symbols);
+    return EmitIdentifier(symbols);
   case CONDITIONAL:
-    RunConditional(symbols);
+    EmitConditional(symbols);
     return std::nullopt;
   case OPERATION:
-    return RunOperation(symbols);
+    return EmitOperation(symbols);
   case NUMBER:
     return value;
   case WHILE:
-    RunWhile(symbols);
+    EmitWhile(symbols);
     return std::nullopt;
   default:
     assert(false);
@@ -27,40 +28,40 @@ std::optional<double> ASTNode::Run(SymbolTable &symbols) {
   };
 }
 
-double ASTNode::RunExpect(SymbolTable &symbols) {
-  if (auto result = Run(symbols)) {
+double ASTNode::EmitExpect(SymbolTable &symbols) {
+  if (auto result = Emit(symbols)) {
     return result.value();
   }
   throw std::runtime_error("Child did not return value!");
 }
 
 // note: I would have made some of these SymbolTable references constant, but
-// they'll be making recursive calls to Run, some of which will need to make
+// they'll be making recursive calls to Emit, some of which will need to make
 // changes to the symbol table, so none of them are constant except the one in
-// RunIdentifier
-void ASTNode::RunScope(SymbolTable &symbols) {
+// EmitIdentifier
+void ASTNode::EmitScope(SymbolTable &symbols) {
   // push a new scope
   // run each child node in order
   // pop scope
   for (ASTNode &child : children) {
-    child.Run(symbols);
+    child.Emit(symbols);
   }
 }
-double ASTNode::RunAssign(SymbolTable &symbols) {
+double ASTNode::EmitAssign(SymbolTable &symbols) {
   assert(children.size() == 2);
-  double rvalue = children.at(1).RunExpect(symbols);
+  double rvalue = children.at(1).EmitExpect(symbols);
   symbols.SetValue(children.at(0).var_id, rvalue);
   return rvalue;
 }
 
-double ASTNode::RunIdentifier(SymbolTable &symbols) {
+double ASTNode::EmitIdentifier(SymbolTable &symbols) {
   assert(value == double{});
   assert(literal == std::string{});
 
   return symbols.GetValue(var_id, token);
 }
 
-void ASTNode::RunConditional(SymbolTable &symbols) {
+void ASTNode::EmitConditional(SymbolTable &symbols) {
   // conditional statement is of the form "if (expression1) statment1 else
   // statement2" so a conditional node should have 2 or 3 children: an
   // expression, a statement, and possibly another statement run the first
@@ -68,9 +69,9 @@ void ASTNode::RunConditional(SymbolTable &symbols) {
   // third, if it exists
   assert(children.size() == 2 || children.size() == 3);
 
-  double condition = children[0].RunExpect(symbols);
+  double condition = children[0].EmitExpect(symbols);
   if (condition != 0) {
-    children[1].Run(symbols);
+    children[1].Emit(symbols);
     return;
   }
 
@@ -78,15 +79,15 @@ void ASTNode::RunConditional(SymbolTable &symbols) {
     return;
   }
 
-  children[2].Run(symbols);
+  children[2].Emit(symbols);
 }
 
-double ASTNode::RunOperation(SymbolTable &symbols) {
+double ASTNode::EmitOperation(SymbolTable &symbols) {
   // node will have an operator (e.g. +, *, etc.) specified somewhere (maybe
   // in the "literal"?) and one or two children run the child or children,
   // apply the operator to the returned value(s), then return the result
   assert(children.size() >= 1);
-  double left = children.at(0).RunExpect(symbols);
+  double left = children.at(0).EmitExpect(symbols);
   if (literal == "!") {
     return left == 0 ? 1 : 0;
   }
@@ -97,14 +98,14 @@ double ASTNode::RunOperation(SymbolTable &symbols) {
   if (literal == "&&") {
     if (!left)
       return 0; // short-circuit when left is false
-    return children[1].RunExpect(symbols) != 0;
+    return children[1].EmitExpect(symbols) != 0;
   } else if (literal == "||") {
     if (left)
       return 1; // short-circuit when left is true
-    return children[1].RunExpect(symbols) != 0;
+    return children[1].EmitExpect(symbols) != 0;
   }
   // don't evaluate the right until you know you won't have to short-circuit
-  double right = children.at(1).RunExpect(symbols);
+  double right = children.at(1).EmitExpect(symbols);
   if (literal == "**") {
     return std::pow(left, right);
   } else if (literal == "*") {
@@ -142,14 +143,14 @@ double ASTNode::RunOperation(SymbolTable &symbols) {
   }
 }
 
-void ASTNode::RunWhile(SymbolTable &symbols) {
+void ASTNode::EmitWhile(SymbolTable &symbols) {
   assert(children.size() == 2);
   assert(value == double{});
   assert(literal == std::string{});
 
   ASTNode &condition = children[0];
   ASTNode &body = children[1];
-  while (condition.RunExpect(symbols)) {
-    body.Run(symbols);
+  while (condition.EmitExpect(symbols)) {
+    body.Emit(symbols);
   }
 }

@@ -65,13 +65,13 @@ public:
     AddChild(std::forward<T>(node));
   }
 
-  std::optional<double> Run(SymbolTable &symbols);
-  double RunExpect(SymbolTable &symbols);
+  std::optional<double> Emit(SymbolTable &symbols);
+  double EmitExpect(SymbolTable &symbols);
 
-  void RunScope(SymbolTable &symbols);
-  double RunAssign(SymbolTable &symbols);
-  double RunIdentifier(SymbolTable &symbols);
-  void RunConditional(SymbolTable &symbols);
-  double RunOperation(SymbolTable &symbols);
-  void RunWhile(SymbolTable &symbols);
+  void EmitScope(SymbolTable &symbols);
+  double EmitAssign(SymbolTable &symbols);
+  double EmitIdentifier(SymbolTable &symbols);
+  void EmitConditional(SymbolTable &symbols);
+  double EmitOperation(SymbolTable &symbols);
+  void EmitWhile(SymbolTable &symbols);
 };

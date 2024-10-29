@@ -290,7 +290,7 @@ public:
     }
   }
 
-  void Execute() { root.Run(table); }
+  void Execute() { root.Emit(table); }
 };
 
 int main(int argc, char *argv[]) {
