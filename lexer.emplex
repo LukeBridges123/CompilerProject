@@ -1,7 +1,6 @@
 -Comment (\/\*(.|\s)*\*\/)|(\/\/(.)*\n)
 IF if
 VAR var
-PRINT print
 NUMBER ([0-9]+)*(\.)?[0-9]*
 WHILE while
 ELSE else
@@ -17,6 +16,7 @@ CLOSE_PARENTHESIS \)
 EQUALS "=="|"!="
 COMPARE "<"|">"|"<="|">="
 BOOLEAN_OP "&&"|"||"
+NOT !
 ASSIGN =
 -WHITESPACE \s
 ENDLINE ;

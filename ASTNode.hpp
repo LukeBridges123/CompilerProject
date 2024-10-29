@@ -18,7 +18,6 @@ public:
   enum Type {
     EMPTY = 0,
     SCOPE,
-    PRINT,
     ASSIGN,
     IDENTIFIER,
     CONDITIONAL,
@@ -76,9 +75,6 @@ public:
     case SCOPE:
       RunScope(symbols);
       return std::nullopt;
-    case PRINT:
-      RunPrint(symbols);
-      return std::nullopt;
     case ASSIGN:
       return RunAssign(symbols);
     case IDENTIFIER:
@@ -117,20 +113,6 @@ public:
     for (ASTNode &child : children) {
       child.Run(symbols);
     }
-  }
-  void RunPrint(SymbolTable &symbols) {
-    // iterate over children
-    // if child is an expression or number, run it and print the value it
-    // returns if it's a string literal, print it need to do something about
-    // identifiers in curly braces
-    for (ASTNode &child : children) {
-      if (child.type == ASTNode::STRING) {
-        std::cout << child.literal;
-      } else {
-        std::cout << child.RunExpect(symbols);
-      }
-    }
-    std::cout << std::endl;
   }
   double RunAssign(SymbolTable &symbols) {
     assert(children.size() == 2);

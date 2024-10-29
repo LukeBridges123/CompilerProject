@@ -31,8 +31,9 @@
 *.out
 *.app
 
-Project2
+Project3
 tests/current
 tests/expected
+tests/*.wat
 
 .vscode

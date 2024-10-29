@@ -9,19 +9,16 @@
 #include "Error.hpp"
 #include "SymbolTable.hpp"
 #include "lexer.hpp"
-#include "string_lexer.hpp"
 
 using namespace emplex;
 
-class MacroCalc {
+class Tubular {
 private:
   std::vector<Token> tokens{};
   emplex::Lexer lexer{};
   SymbolTable table{};
   size_t token_idx{0};
   ASTNode root{ASTNode::SCOPE};
-
-  emplex2::StringLexer string_lexer{};
 
   Token const &CurToken() const {
     if (token_idx >= tokens.size())
@@ -220,46 +217,6 @@ private:
     return ASTNode{};
   }
 
-  ASTNode ParsePrint() {
-    ExpectToken(Lexer::ID_PRINT);
-    ExpectToken(Lexer::ID_OPEN_PARENTHESIS);
-    ASTNode node{ASTNode::PRINT};
-    if (auto current = IfToken(Lexer::ID_STRING)) {
-      // strip quotes
-      std::string to_print =
-          current->lexeme.substr(1, current->lexeme.length() - 2);
-      std::vector<emplex2::Token> string_pieces =
-          string_lexer.Tokenize(to_print);
-      for (auto token : string_pieces) {
-        switch (token.id) {
-        case emplex2::StringLexer::ID_LITERAL:
-          node.AddChild(ASTNode(ASTNode::STRING, token.lexeme));
-          break;
-        case emplex2::StringLexer::ID_ESCAPE_CHAR:
-          node.AddChild(ASTNode(ASTNode::STRING, token.lexeme));
-          break;
-        case emplex2::StringLexer::ID_IDENTIFIER: {
-          std::string ident = token.lexeme.substr(1, token.lexeme.length() - 2);
-          node.AddChild(ASTNode(ASTNode::IDENTIFIER,
-                                table.FindVar(ident, current->line_id),
-                                nullptr));
-          break;
-        }
-        default:
-          // Since ID_LITERAL is a catchall for everything else, I don't think
-          // there should be any unexpected tokens in strings, but I'll think
-          // about it some more and maybe  add some better error handling.
-          assert(false);
-        }
-      }
-    } else {
-      node.AddChild(ParseExpr());
-    }
-    ExpectToken(Lexer::ID_CLOSE_PARENTHESIS);
-    ExpectToken(Lexer::ID_ENDLINE);
-    return node;
-  }
-
   ASTNode ParseIF() {
     ExpectToken(Lexer::ID_IF);
     ExpectToken(Lexer::ID_OPEN_PARENTHESIS);
@@ -312,8 +269,6 @@ private:
       ExpectToken(Lexer::ID_ENDLINE);
       return node;
     }
-    case Lexer::ID_PRINT:
-      return ParsePrint();
     case Lexer::ID_IF:
       return ParseIF();
     case Lexer::ID_WHILE:
@@ -324,7 +279,7 @@ private:
   }
 
 public:
-  MacroCalc(std::ifstream &input) {
+  Tubular(std::ifstream &input) {
     tokens = lexer.Tokenize(input);
     Parse();
   };
@@ -350,7 +305,7 @@ int main(int argc, char *argv[]) {
     ErrorNoLine("Unable to open file '", filename, "'.");
   }
 
-  MacroCalc calc{in_file};
-  calc.Parse();
-  calc.Execute();
+  Tubular tube{in_file};
+  tube.Parse();
+  tube.Execute();
 }
