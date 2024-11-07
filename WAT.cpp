@@ -24,9 +24,8 @@ void WATWriter::Write(std::ostream &out, WATExpr const &expr) {
   }
 
   /// write children
-  if (!expr.attributes.empty())
-    out << std::endl;
   for (WATExpr const &child : expr.children) {
+    out << std::endl;
     Write(out, child);
   }
   curindent -= INDENT;

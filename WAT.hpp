@@ -14,6 +14,13 @@ struct WATExpr {
   std::vector<std::string> attributes{};
   std::vector<WATExpr> children{};
   std::optional<std::string> comment = std::nullopt;
+
+  WATExpr(std::string atom) : atom(atom) {};
+  WATExpr(std::string atom, std::vector<std::string> attributes)
+      : atom(atom), attributes(attributes) {};
+  template <typename... T> WATExpr(std::string atom, T... attrs) : atom(atom) {
+    attributes.push_back(attrs...);
+  };
 };
 
 class WATWriter {
