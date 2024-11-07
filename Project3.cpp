@@ -1,4 +1,5 @@
 #include <cassert>
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <string>
@@ -8,6 +9,7 @@
 #include "ASTNode.hpp"
 #include "Error.hpp"
 #include "SymbolTable.hpp"
+#include "WAT.hpp"
 #include "lexer.hpp"
 
 using namespace emplex;
@@ -18,7 +20,7 @@ private:
   emplex::Lexer lexer{};
   SymbolTable table{};
   size_t token_idx{0};
-  ASTNode root{ASTNode::SCOPE};
+  ASTNode root{ASTNode::MODULE};
 
   Token const &CurToken() const {
     if (token_idx >= tokens.size())
@@ -177,7 +179,7 @@ private:
   }
 
   ASTNode ParseNegate() {
-    auto lhs = std::make_unique<ASTNode>(ASTNode::NUMBER, -1);
+    auto lhs = std::make_unique<ASTNode>(ASTNode::LITERAL, -1);
     auto rhs = ParseTerm();
     return ASTNode(ASTNode::OPERATION, "*", std::move(*lhs), std::move(rhs));
   }
@@ -191,7 +193,7 @@ private:
     Token const &current = CurToken();
     switch (current) {
     case Lexer::ID_NUMBER:
-      return ASTNode(ASTNode::NUMBER, std::stod(ConsumeToken().lexeme));
+      return ASTNode(ASTNode::LITERAL, std::stod(ConsumeToken().lexeme));
     case Lexer::ID_ID:
       return ASTNode(ASTNode::IDENTIFIER,
                      table.FindVar(ConsumeToken().lexeme, current.line_id),
@@ -290,7 +292,7 @@ public:
     }
   }
 
-  void Execute() { root.Emit(table); }
+  WATExpr GenerateCode() { return root.Emit(table); }
 };
 
 int main(int argc, char *argv[]) {
@@ -298,14 +300,16 @@ int main(int argc, char *argv[]) {
     ErrorNoLine("Format: ", argv[0], " [filename]");
   }
 
-  std::string filename = argv[1];
-
-  std::ifstream in_file(filename);
+  std::string filename{argv[1]};
+  std::ifstream in_file{filename};
   if (in_file.fail()) {
     ErrorNoLine("Unable to open file '", filename, "'.");
   }
 
   Tubular tube{in_file};
   tube.Parse();
-  tube.Execute();
+  WATExpr wat = tube.GenerateCode();
+
+  WATWriter writer;
+  writer.Write(std::cout, wat);
 }

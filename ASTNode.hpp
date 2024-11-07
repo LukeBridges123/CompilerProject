@@ -1,13 +1,12 @@
 #pragma once
 
 #include <cmath>
-#include <sstream>
-#include <stdexcept>
 #include <string>
 #include <vector>
 
-#include "Error.hpp"
 #include "SymbolTable.hpp"
+#include "WAT.hpp"
+
 class ASTNode {
 
 private:
@@ -16,12 +15,13 @@ private:
 public:
   enum Type {
     EMPTY = 0,
+    MODULE,
     SCOPE,
     ASSIGN,
     IDENTIFIER,
     CONDITIONAL,
     OPERATION,
-    NUMBER,
+    LITERAL,
     WHILE,
     STRING
   };
@@ -65,13 +65,13 @@ public:
     AddChild(std::forward<T>(node));
   }
 
-  std::optional<double> Emit(SymbolTable &symbols);
-  double EmitExpect(SymbolTable &symbols);
-
-  void EmitScope(SymbolTable &symbols);
-  double EmitAssign(SymbolTable &symbols);
-  double EmitIdentifier(SymbolTable &symbols);
-  void EmitConditional(SymbolTable &symbols);
-  double EmitOperation(SymbolTable &symbols);
-  void EmitWhile(SymbolTable &symbols);
+  WATExpr Emit(SymbolTable const &symbols);
+  WATExpr EmitModule(SymbolTable const &symbols);
+  WATExpr EmitLiteral(SymbolTable const &symbols);
+  WATExpr EmitScope(SymbolTable const &symbols);
+  WATExpr EmitAssign(SymbolTable const &symbols);
+  WATExpr EmitIdentifier(SymbolTable const &symbols);
+  WATExpr EmitConditional(SymbolTable const &symbols);
+  WATExpr EmitOperation(SymbolTable const &symbols);
+  WATExpr EmitWhile(SymbolTable const &symbols);
 };

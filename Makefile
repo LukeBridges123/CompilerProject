@@ -30,18 +30,21 @@ tests: $(PROJECT)
 	@echo "Tests completed."
 
 # Always run the tests, even if nothing has changed
-.PHONY: tests
+.PHONY: tests serve
 
 # List header files here that should trigger full recompilation when they change.
 KEY_FILES := ASTNode.hpp SymbolTable.hpp Error.hpp
 # List source files here
-SOURCE := $(PROJECT).o ASTNode.o
+SOURCE := $(PROJECT).o ASTNode.o WAT.o
 
 $(PROJECT):	$(SOURCE) $(KEY_FILES)
 	$(CXX) $(CFLAGS) -o $(PROJECT) $(SOURCE)
 
 %.o: %.cpp
 	$(CXX) -c $(CFLAGS) -o $@ $<
+
+serve: tests
+	cd tests && python -m http.server
 
 clean:
 	rm -f $(PROJECT) *.o tests/current/output-*.txt
