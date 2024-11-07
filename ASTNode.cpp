@@ -30,8 +30,7 @@ WATExpr ASTNode::Emit(SymbolTable const &symbols) {
 WATExpr ASTNode::EmitModule(SymbolTable const &symbols) {
   WATExpr out{"module"};
   for (ASTNode &child : children) {
-    WATExpr childexpr = child.Emit(symbols);
-    out.children.push_back(childexpr);
+    out.Child(child.Emit(symbols));
   }
   return out;
 }

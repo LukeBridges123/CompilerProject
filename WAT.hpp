@@ -15,6 +15,11 @@ struct WATExpr {
   std::vector<WATExpr> children{};
   std::optional<std::string> comment = std::nullopt;
 
+  // from std::vector::emplace_back
+  template <typename... Args> void Child(Args &&...args) {
+    children.push_back(WATExpr(std::forward<Args>(args)...));
+  };
+
   WATExpr(std::string atom) : atom(atom) {};
   WATExpr(std::string atom, std::vector<std::string> attributes)
       : atom(atom), attributes(attributes) {};
