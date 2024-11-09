@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "Error.hpp"
+#include "Type.hpp"
 
 struct VariableInfo {
   std::string name{};
@@ -17,11 +18,19 @@ struct VariableInfo {
   bool initialized = false;
 };
 
+// TODO: change string types eg. enum
+struct FunctionInfo {
+  std::string name;
+  size_t line_declared{};
+  std::vector<std::pair<std::string, size_t>> variables{};
+  Type rettype = Type::UNKNOWN;
+};
+
 class SymbolTable {
 private:
   typedef std::unordered_map<std::string, size_t> scope_t;
   std::vector<scope_t> scope_stack{1};
-  std::vector<VariableInfo> all_variables{};
+  std::vector<VariableInfo> variables{};
 
   std::optional<size_t> FindVarMaybe(std::string const &name) const {
     for (auto curr_scope = scope_stack.rbegin();
@@ -35,6 +44,8 @@ private:
   }
 
 public:
+  std::vector<FunctionInfo> functions{};
+
   void PushScope() { this->scope_stack.emplace_back(); }
 
   void PopScope() {
@@ -64,14 +75,20 @@ public:
       Error(line_num, "Redeclaration of variable ", name);
     }
     VariableInfo new_var_info = VariableInfo{name, value, line_num};
-    size_t new_index = this->all_variables.size();
-    all_variables.push_back(new_var_info);
+    size_t new_index = this->variables.size();
+    variables.push_back(new_var_info);
     curr_scope->insert({name, new_index});
     return new_index;
   }
 
+  size_t AddFunction(std::string const &name, size_t line_num) {
+    size_t idx = this->functions.size();
+    variables.emplace_back(name, line_num);
+    return idx;
+  }
+
   double GetValue(size_t var_id, Token const *token) const {
-    if (!all_variables[var_id].initialized) {
+    if (!variables[var_id].initialized) {
       if (token) {
         Error(*token, "attempt to access uninitialized variable ",
               token->lexeme);
@@ -79,11 +96,11 @@ public:
         ErrorNoLine("Attempt to access uninitialized variable");
       }
     }
-    return all_variables[var_id].value;
+    return variables[var_id].value;
   }
 
   void SetValue(size_t var_id, double new_value) {
-    all_variables[var_id].value = new_value;
-    all_variables[var_id].initialized = true;
+    variables[var_id].value = new_value;
+    variables[var_id].initialized = true;
   }
 };

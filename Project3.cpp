@@ -192,6 +192,7 @@ private:
   ASTNode ParseTerm() {
     Token const &current = CurToken();
     switch (current) {
+    case Lexer::ID_FLOAT:
     case Lexer::ID_INT:
       return ASTNode(ASTNode::LITERAL, std::stod(ConsumeToken().lexeme));
     case Lexer::ID_ID:
@@ -266,6 +267,7 @@ private:
     case Lexer::ID_VAR:
       return ParseDecl();
     case Lexer::ID_ID:
+    case Lexer::ID_FLOAT:
     case Lexer::ID_INT: {
       ASTNode node = ParseExpr();
       ExpectToken(Lexer::ID_ENDLINE);
