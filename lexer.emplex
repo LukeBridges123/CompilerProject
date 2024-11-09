@@ -6,6 +6,7 @@ FLOAT ([0-9]+)*(\.)[0-9]*
 WHILE while
 ELSE else
 FUNCTION function
+RETURN return
 SCOPE_START \{
 TYPE "int"|"double"|"char"
 BREAK "break"
@@ -24,4 +25,3 @@ SQRT sqrt
 TYPE_CAST :("int"|"double")
 CONTINUE "continue"
 ID [a-zA-Z][a-zA-Z0-9_]*
-UNKNOWN .
