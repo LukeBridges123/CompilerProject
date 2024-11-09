@@ -3,10 +3,8 @@
 #include "ASTNode.hpp"
 #include "Error.hpp"
 
-WATExpr ASTNode::Emit(SymbolTable const &symbols) {
+std::vector<WATExpr> ASTNode::Emit(SymbolTable const &symbols) {
   switch (type) {
-  case MODULE:
-    return EmitModule(symbols);
   case SCOPE:
     return EmitScope(symbols);
   case ASSIGN:
@@ -22,22 +20,25 @@ WATExpr ASTNode::Emit(SymbolTable const &symbols) {
   case WHILE:
     return EmitWhile(symbols);
   case EMPTY:
+  case MODULE: // module should be called manually on root node
   default:
     assert(false);
+    return {};
   };
 }
 
 WATExpr ASTNode::EmitModule(SymbolTable const &symbols) {
+  assert(type == ASTNode::MODULE);
   WATExpr out{"module"};
   for (ASTNode &child : children) {
-    out.Child(child.Emit(symbols));
+    out.AddChildren(child.Emit(symbols));
   }
   return out;
 }
 
-WATExpr ASTNode::EmitLiteral(SymbolTable const &symbols) {}
+std::vector<WATExpr> ASTNode::EmitLiteral(SymbolTable const &symbols) {}
 
-WATExpr ASTNode::EmitScope(SymbolTable const &symbols) {
+std::vector<WATExpr> ASTNode::EmitScope(SymbolTable const &symbols) {
   // push a new scope
   // run each child node in order
   // pop scope
@@ -46,21 +47,21 @@ WATExpr ASTNode::EmitScope(SymbolTable const &symbols) {
   // }
 }
 
-WATExpr ASTNode::EmitAssign(SymbolTable const &symbols) {
+std::vector<WATExpr> ASTNode::EmitAssign(SymbolTable const &symbols) {
   // assert(children.size() == 2);
   // double rvalue = children.at(1).EmitExpect(symbols);
   // symbols.SetValue(children.at(0).var_id, rvalue);
   // return rvalue;
 }
 
-WATExpr ASTNode::EmitIdentifier(SymbolTable const &symbols) {
+std::vector<WATExpr> ASTNode::EmitIdentifier(SymbolTable const &symbols) {
   // assert(value == double{});
   // assert(literal == std::string{});
 
   // return symbols.GetValue(var_id, token);
 }
 
-WATExpr ASTNode::EmitConditional(SymbolTable const &symbols) {
+std::vector<WATExpr> ASTNode::EmitConditional(SymbolTable const &symbols) {
   // conditional statement is of the form "if (expression1) statment1 else
   // statement2" so a conditional node should have 2 or 3 children: an
   // expression, a statement, and possibly another statement run the first
@@ -81,7 +82,7 @@ WATExpr ASTNode::EmitConditional(SymbolTable const &symbols) {
   // children[2].Emit(symbols);
 }
 
-WATExpr ASTNode::EmitOperation(SymbolTable const &symbols) {
+std::vector<WATExpr> ASTNode::EmitOperation(SymbolTable const &symbols) {
   // node will have an operator (e.g. +, *, etc.) specified somewhere (maybe
   // in the "literal"?) and one or two children run the child or children,
   // apply the operator to the returned value(s), then return the result
@@ -142,7 +143,7 @@ WATExpr ASTNode::EmitOperation(SymbolTable const &symbols) {
   // }
 }
 
-WATExpr ASTNode::EmitWhile(SymbolTable const &symbols) {
+std::vector<WATExpr> ASTNode::EmitWhile(SymbolTable const &symbols) {
   // assert(children.size() == 2);
   // assert(value == double{});
   // assert(literal == std::string{});

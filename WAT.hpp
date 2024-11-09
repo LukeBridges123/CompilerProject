@@ -32,6 +32,11 @@ struct WATExpr {
   template <typename... Args> void Child(Args &&...args) {
     children.push_back(WATExpr(std::forward<Args>(args)...));
   };
+
+  void AddChildren(std::vector<WATExpr> new_children) {
+    std::move(new_children.begin(), new_children.end(),
+              std::back_inserter(children));
+  };
 };
 
 class WATWriter {

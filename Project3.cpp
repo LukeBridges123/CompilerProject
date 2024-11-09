@@ -292,7 +292,7 @@ public:
     }
   }
 
-  WATExpr GenerateCode() { return root.Emit(table); }
+  WATExpr GenerateCode() { return root.EmitModule(table); }
 };
 
 int main(int argc, char *argv[]) {

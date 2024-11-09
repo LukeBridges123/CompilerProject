@@ -65,13 +65,13 @@ public:
     AddChild(std::forward<T>(node));
   }
 
-  WATExpr Emit(SymbolTable const &symbols);
   WATExpr EmitModule(SymbolTable const &symbols);
-  WATExpr EmitLiteral(SymbolTable const &symbols);
-  WATExpr EmitScope(SymbolTable const &symbols);
-  WATExpr EmitAssign(SymbolTable const &symbols);
-  WATExpr EmitIdentifier(SymbolTable const &symbols);
-  WATExpr EmitConditional(SymbolTable const &symbols);
-  WATExpr EmitOperation(SymbolTable const &symbols);
-  WATExpr EmitWhile(SymbolTable const &symbols);
+  std::vector<WATExpr> Emit(SymbolTable const &symbols);
+  std::vector<WATExpr> EmitLiteral(SymbolTable const &symbols);
+  std::vector<WATExpr> EmitScope(SymbolTable const &symbols);
+  std::vector<WATExpr> EmitAssign(SymbolTable const &symbols);
+  std::vector<WATExpr> EmitIdentifier(SymbolTable const &symbols);
+  std::vector<WATExpr> EmitConditional(SymbolTable const &symbols);
+  std::vector<WATExpr> EmitOperation(SymbolTable const &symbols);
+  std::vector<WATExpr> EmitWhile(SymbolTable const &symbols);
 };
