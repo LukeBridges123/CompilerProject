@@ -50,7 +50,7 @@ private:
   }
 
   ASTNode ParseScope() {
-    ExpectToken(Lexer::ID_SCOPE_Start);
+    ExpectToken(Lexer::ID_SCOPE_START);
     ASTNode scope{ASTNode::SCOPE};
     table.PushScope();
 
@@ -192,7 +192,7 @@ private:
   ASTNode ParseTerm() {
     Token const &current = CurToken();
     switch (current) {
-    case Lexer::ID_NUMBER:
+    case Lexer::ID_INT:
       return ASTNode(ASTNode::LITERAL, std::stod(ConsumeToken().lexeme));
     case Lexer::ID_ID:
       return ASTNode(ASTNode::IDENTIFIER,
@@ -261,12 +261,12 @@ private:
   ASTNode ParseStatement() {
     Token const &current = CurToken();
     switch (current) {
-    case Lexer::ID_SCOPE_Start:
+    case Lexer::ID_SCOPE_START:
       return ParseScope();
     case Lexer::ID_VAR:
       return ParseDecl();
     case Lexer::ID_ID:
-    case Lexer::ID_NUMBER: {
+    case Lexer::ID_INT: {
       ASTNode node = ParseExpr();
       ExpectToken(Lexer::ID_ENDLINE);
       return node;
