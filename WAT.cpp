@@ -13,13 +13,9 @@ void WATWriter::Write(std::ostream &out, WATExpr const &expr) {
 
   curindent += INDENT;
 
-  /// write attributes
-  // s-expr with attributes can be written on one line,
-  // but if s-expr has children then attrs and children each get own line
-  std::string separator = expr.children.empty() ? " " : ("\n" + Indent());
   for (auto i = expr.attributes.cbegin(); i != expr.attributes.cend(); i++) {
     if (i != expr.attributes.cend())
-      out << separator;
+      out << " ";
     out << *i;
   }
 
@@ -32,3 +28,5 @@ void WATWriter::Write(std::ostream &out, WATExpr const &expr) {
 
   out << ")";
 }
+
+std::string Quote(std::string in) { return '"' + in + '"'; }

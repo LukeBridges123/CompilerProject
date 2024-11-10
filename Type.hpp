@@ -18,5 +18,7 @@ public:
 
   Type(TypeId id) : id(id) {};
   Type(Token const &token);
+
   std::string TypeName() const;
+  std::string WATType() const;
 };

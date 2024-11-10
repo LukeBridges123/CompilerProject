@@ -24,13 +24,23 @@ struct WATExpr {
         comment(comment) {};
 
   // expand attr strings into attributes vector
-  template <typename... T>
-  WATExpr(std::string atom, T... attributes)
-      : WATExpr{atom, {attributes...}} {};
+  template <typename... Args>
+  WATExpr(std::string atom, Args &&...attrs) : atom(atom) {
+    Attributes(std::forward<Args>(attrs)...);
+  }
+
+  template <typename T> void Attributes(T attr) { attributes.push_back(attr); }
+
+  template <typename T, typename... Rest>
+  void Attributes(T attr, Rest &&...rest) {
+    attributes.push_back(attr);
+    Attributes(rest...);
+  }
 
   // from std::vector::emplace_back
-  template <typename... Args> void Child(Args &&...args) {
+  template <typename... Args> WATExpr &Child(Args &&...args) {
     children.push_back(WATExpr(std::forward<Args>(args)...));
+    return children.back();
   };
 
   void AddChildren(std::vector<WATExpr> new_children) {
@@ -47,3 +57,5 @@ private:
 public:
   void Write(std::ostream &out, WATExpr const &expr);
 };
+
+std::string Quote(std::string in);

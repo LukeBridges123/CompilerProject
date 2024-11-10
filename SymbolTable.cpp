@@ -38,13 +38,13 @@ bool SymbolTable::HasVar(std::string const &name) const {
   return FindVarMaybe(name).has_value();
 }
 
-size_t SymbolTable::AddVar(std::string const &name, size_t line_num,
-                           double value = 0.0) {
+size_t SymbolTable::AddVar(std::string const &name, Type type,
+                           size_t line_num) {
   auto curr_scope = scope_stack.rbegin();
   if (curr_scope->find(name) != curr_scope->end()) {
     Error(line_num, "Redeclaration of variable ", name);
   }
-  VariableInfo new_var_info = VariableInfo{name, value, line_num};
+  VariableInfo new_var_info = VariableInfo{name, line_num, type};
   size_t new_index = this->variables.size();
   variables.push_back(new_var_info);
   curr_scope->insert({name, new_index});
@@ -55,20 +55,4 @@ size_t SymbolTable::AddFunction(std::string const &name, size_t line_num) {
   size_t idx = this->functions.size();
   functions.emplace_back(name, line_num);
   return idx;
-}
-
-double SymbolTable::GetValue(size_t var_id, Token const *token) const {
-  if (!variables[var_id].initialized) {
-    if (token) {
-      Error(*token, "attempt to access uninitialized variable ", token->lexeme);
-    } else {
-      ErrorNoLine("Attempt to access uninitialized variable");
-    }
-  }
-  return variables[var_id].value;
-}
-
-void SymbolTable::SetValue(size_t var_id, double new_value) {
-  variables[var_id].value = new_value;
-  variables[var_id].initialized = true;
 }

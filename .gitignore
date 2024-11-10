@@ -35,5 +35,7 @@ Project3
 tests/current
 tests/expected
 tests/*.wat
+tests/*.wasm
 
+compile_flags.txt
 .vscode
