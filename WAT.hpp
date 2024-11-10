@@ -14,6 +14,8 @@ struct FormatOptions {
   bool write_inline = false;
   // put attrs on same line as atom, instead of on separate lines
   bool inline_attrs = true;
+  // put comment on same line instead of preceding line
+  bool inline_comment = false;
 };
 
 // separate vectors for arguments + children possibly isn't the best
@@ -61,11 +63,20 @@ struct WATExpr {
 class WATWriter {
 private:
   int curindent = 0;
+  std::ostream &out;
+  // buffer for inline comments, since we can't write them out
+  // until after we've finished writing out close parens for a line,
+  // and we could end up with multiple inline comments
+  // intended for the same line
+  std::vector<std::string> comment_queue{};
+
   std::string Indent() const;
   std::string Newline() const;
+  void NewlineWithComments();
 
 public:
-  void Write(std::ostream &out, WATExpr const &expr);
+  WATWriter(std::ostream &out) : out(out) {};
+  void Write(WATExpr const &expr);
 };
 
 std::string Quote(std::string in);

@@ -12,10 +12,21 @@ WATExpr &WATExpr::Inline() {
 
 std::string WATWriter::Indent() const { return std::string(curindent, ' '); }
 std::string WATWriter::Newline() const { return "\n" + Indent(); }
+void WATWriter::NewlineWithComments() {
+  if (comment_queue.empty()) {
+    out << Newline();
+    return;
+  }
+  while (!comment_queue.empty()) {
+    out << " ;; " << comment_queue.back();
+    comment_queue.pop_back();
+    out << Newline();
+  }
+}
 
-void WATWriter::Write(std::ostream &out, WATExpr const &expr) {
+void WATWriter::Write(WATExpr const &expr) {
   // write comment
-  if (expr.comment) {
+  if (expr.comment && !expr.format.inline_comment) {
     out << ";; " << expr.comment.value() << Newline();
   }
 
@@ -26,8 +37,9 @@ void WATWriter::Write(std::ostream &out, WATExpr const &expr) {
 
   std::string separator = expr.format.inline_attrs ? " " : Newline();
   for (auto i = expr.attributes.cbegin(); i != expr.attributes.cend(); i++) {
-    if (i != expr.attributes.cend())
+    if (i != expr.attributes.cend()) {
       out << separator;
+    }
     out << *i;
   }
 
@@ -37,15 +49,18 @@ void WATWriter::Write(std::ostream &out, WATExpr const &expr) {
     if (child.format.write_inline) {
       out << " ";
     } else {
-      out << Newline();
+      NewlineWithComments();
     }
-    Write(out, child);
+    Write(child);
   }
   curindent -= INDENT;
 
   out << ")";
+  if (expr.comment && expr.format.inline_comment) {
+    comment_queue.push_back(expr.comment.value());
+  }
   if (expr.format.newline) {
-    out << Newline();
+    NewlineWithComments();
   }
 }
 

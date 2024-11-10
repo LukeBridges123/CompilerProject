@@ -368,6 +368,6 @@ int main(int argc, char *argv[]) {
   tube.Parse();
   WATExpr wat = tube.GenerateCode();
 
-  WATWriter writer;
-  writer.Write(std::cout, wat);
+  WATWriter writer{std::cout};
+  writer.Write(wat);
 }
