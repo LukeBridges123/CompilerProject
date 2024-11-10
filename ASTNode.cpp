@@ -182,7 +182,7 @@ std::vector<WATExpr> ASTNode::EmitOperation(SymbolTable const &symbols) const {
   } else if (literal == "-"){
     WATExpr expr{"i32.mul"};
     WATExpr negative_one{"i32.const", "-1"};
-    left.insert(left.begin(), negative_one);
+    expr.AddChildren({negative_one});
     expr.AddChildren(left);
     return {expr};
   }
@@ -192,13 +192,24 @@ std::vector<WATExpr> ASTNode::EmitOperation(SymbolTable const &symbols) const {
     expr.AddChildren(left);
     expr.AddChildren(right);
     return {expr};
+  } else if (literal == "-") {
+    WATExpr expr{"i32.sub"};
+    expr.AddChildren(left);
+    expr.AddChildren(right);
+    return {expr};
   } else if (literal == "*") {
     WATExpr expr{"i32.mul"};
     expr.AddChildren(left);
     expr.AddChildren(right);
     return {expr};
+  // handle division later
   } else if (literal == "%"){
     WATExpr expr{"i32.rem_u"};
+    expr.AddChildren(left);
+    expr.AddChildren(right);
+    return {expr};
+  } else if (literal == "<") {
+    WATExpr expr{"i32.lt"};
     expr.AddChildren(left);
     expr.AddChildren(right);
     return {expr};
