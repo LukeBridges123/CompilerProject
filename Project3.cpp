@@ -196,17 +196,18 @@ private:
   }
 
   ASTNode ParseMulDivMod() {
-    auto lhs = std::make_unique<ASTNode>(ParseExponentiation());
+    auto lhs = std::make_unique<ASTNode>(ParseTerm());
     while (CurToken().lexeme == "*" || CurToken().lexeme == "/" ||
            CurToken().lexeme == "%") {
       std::string operation = ConsumeToken().lexeme;
-      ASTNode rhs = ParseExponentiation();
+      ASTNode rhs = ParseTerm();
       lhs = std::make_unique<ASTNode>(ASTNode(ASTNode::OPERATION, operation,
                                               std::move(*lhs), std::move(rhs)));
     }
     return ASTNode{std::move(*lhs)};
   }
 
+/*
   ASTNode ParseExponentiation() {
     ASTNode lhs = ParseTerm();
     if (CurToken().lexeme == "**") {
@@ -216,6 +217,7 @@ private:
     }
     return lhs;
   }
+*/
 
   ASTNode ParseNegate() {
     auto lhs = std::make_unique<ASTNode>(ASTNode::LITERAL, -1);
