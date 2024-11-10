@@ -228,6 +228,11 @@ private:
     return ASTNode(ASTNode::OPERATION, "!", std::move(rhs));
   }
 
+  ASTNode ParseSqrt(){
+    auto inside = ParseExpr();
+    return ASTNode(ASTNode::OPERATION, "sqrt", std::move(inside));
+  }
+
   ASTNode ParseTerm() {
     Token const &current = CurToken();
     switch (current) {
@@ -253,6 +258,9 @@ private:
     case Lexer::ID_NOT:
       ConsumeToken();
       return ParseNOT();
+    case Lexer::ID_SQRT:
+      ConsumeToken();
+      return ParseSqrt();
     default:
       ErrorUnexpected(current);
     }
