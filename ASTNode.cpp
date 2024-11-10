@@ -51,7 +51,6 @@ WATExpr ASTNode::EmitModule(SymbolTable const &symbols) const {
 std::vector<WATExpr> ASTNode::EmitLiteral(SymbolTable const &symbols) const {
   WATExpr literal{"i32.const", std::format("{}", value)};
   literal.comment = "Literal value";
-  literal.format.inline_comment = true;
   return {literal};
 }
 

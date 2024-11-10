@@ -15,7 +15,7 @@ struct FormatOptions {
   // put attrs on same line as atom, instead of on separate lines
   bool inline_attrs = true;
   // put comment on same line instead of preceding line
-  bool inline_comment = false;
+  bool inline_comment = true;
 };
 
 // separate vectors for arguments + children possibly isn't the best
