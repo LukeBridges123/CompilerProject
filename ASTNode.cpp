@@ -7,6 +7,8 @@ std::vector<WATExpr> ASTNode::Emit(SymbolTable const &symbols) {
   switch (type) {
   case SCOPE:
     return EmitScope(symbols);
+  case FUNCTION:
+    return EmitFunction(symbols);
   case ASSIGN:
     return EmitAssign(symbols);
   case IDENTIFIER:
@@ -19,6 +21,10 @@ std::vector<WATExpr> ASTNode::Emit(SymbolTable const &symbols) {
     return EmitLiteral(symbols);
   case WHILE:
     return EmitWhile(symbols);
+  case RETURN: {
+    assert(children.size() == 1);
+    return children.at(0).Emit(symbols);
+  }
   case EMPTY:
   case MODULE: // module should be called manually on root node
   default:
@@ -154,3 +160,5 @@ std::vector<WATExpr> ASTNode::EmitWhile(SymbolTable const &symbols) {
   //   body.Emit(symbols);
   // }
 }
+
+std::vector<WATExpr> ASTNode::EmitFunction(SymbolTable const &symbols) {}

@@ -23,7 +23,9 @@ public:
     OPERATION,
     LITERAL,
     WHILE,
-    STRING
+    STRING,
+    FUNCTION,
+    RETURN // TODO: should return actually be a node?
   };
   Type const type;
   double value{};
@@ -74,4 +76,5 @@ public:
   std::vector<WATExpr> EmitConditional(SymbolTable const &symbols);
   std::vector<WATExpr> EmitOperation(SymbolTable const &symbols);
   std::vector<WATExpr> EmitWhile(SymbolTable const &symbols);
+  std::vector<WATExpr> EmitFunction(SymbolTable const &symbols);
 };

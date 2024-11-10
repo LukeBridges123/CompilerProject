@@ -1,5 +1,7 @@
 #pragma once
 
+// TODO(rose): accidentally git merged SymbolTable back into single header file
+
 #include <cassert>
 #include <iterator>
 #include <optional>
@@ -22,7 +24,7 @@ struct VariableInfo {
 struct FunctionInfo {
   std::string name;
   size_t line_declared{};
-  std::vector<std::pair<std::string, size_t>> variables{};
+  std::vector<std::pair<std::string, size_t>> arguments{};
   Type rettype = Type::UNKNOWN;
 };
 
@@ -83,7 +85,7 @@ public:
 
   size_t AddFunction(std::string const &name, size_t line_num) {
     size_t idx = this->functions.size();
-    variables.emplace_back(name, line_num);
+    functions.emplace_back(name, line_num);
     return idx;
   }
 

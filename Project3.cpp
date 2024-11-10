@@ -1,5 +1,5 @@
 #include <cassert>
-#include <filesystem>
+#include <format>
 #include <fstream>
 #include <memory>
 #include <string>
@@ -9,6 +9,7 @@
 #include "ASTNode.hpp"
 #include "Error.hpp"
 #include "SymbolTable.hpp"
+#include "Type.hpp"
 #include "WAT.hpp"
 #include "lexer.hpp"
 
@@ -49,15 +50,52 @@ private:
     return nullptr;
   }
 
-  ASTNode ParseScope() {
+  void ParseBlock(ASTNode &block) {
     ExpectToken(Lexer::ID_SCOPE_START);
-    ASTNode scope{ASTNode::SCOPE};
-    table.PushScope();
-
     while (CurToken() != Lexer::ID_SCOPE_END) {
-      scope.AddChild(ParseStatement());
+      block.AddChild(ParseStatement());
     }
     ConsumeToken();
+  }
+
+  ASTNode ParseFunction() {
+    ExpectToken(Lexer::ID_FUNCTION);
+
+    Token func_name = ExpectToken(Lexer::ID_ID);
+    size_t func_id = table.AddFunction(func_name.lexeme, func_name.line_id);
+    FunctionInfo &func_info = table.functions.at(func_id);
+    ASTNode function{ASTNode::FUNCTION, func_id, &func_name};
+
+    table.PushScope();
+
+    ExpectToken(Lexer::ID_OPEN_PARENTHESIS);
+
+    // parse arguments
+    while (CurToken() != Lexer::ID_CLOSE_PARENTHESIS) {
+      Type var_type = ExpectToken(Lexer::ID_TYPE);
+      Token var_name = ExpectToken(Lexer::ID_ID);
+
+      size_t var_id = table.AddVar(var_name.lexeme, var_name.line_id);
+      func_info.arguments.emplace_back(var_name.lexeme, var_id);
+      IfToken(','); // consume comma if exists
+    }
+    ConsumeToken(); // close parenthesis
+
+    // parse return type
+    ExpectToken(':');
+    func_info.rettype = ExpectToken(Lexer::ID_TYPE);
+
+    // parse body
+    ParseBlock(function);
+
+    table.PopScope();
+    return function;
+  }
+
+  ASTNode ParseScope() {
+    ASTNode scope{ASTNode::SCOPE};
+    table.PushScope();
+    ParseBlock(scope);
     table.PopScope();
     return scope;
   }
@@ -262,6 +300,8 @@ private:
   ASTNode ParseStatement() {
     Token const &current = CurToken();
     switch (current) {
+    case Lexer::ID_FUNCTION:
+      return ParseFunction();
     case Lexer::ID_SCOPE_START:
       return ParseScope();
     case Lexer::ID_VAR:
@@ -270,6 +310,13 @@ private:
     case Lexer::ID_FLOAT:
     case Lexer::ID_INT: {
       ASTNode node = ParseExpr();
+      ExpectToken(Lexer::ID_ENDLINE);
+      return node;
+    }
+    case Lexer::ID_RETURN: {
+      ASTNode node = ASTNode{ASTNode::RETURN};
+      ConsumeToken();
+      node.AddChild(ParseExpr());
       ExpectToken(Lexer::ID_ENDLINE);
       return node;
     }
