@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -53,10 +54,8 @@ struct WATExpr {
     return children.back();
   };
 
-  void AddChildren(std::vector<WATExpr> new_children) {
-    std::move(new_children.begin(), new_children.end(),
-              std::back_inserter(children));
-  };
+  void AddChildren(std::vector<WATExpr> new_children);
+  WATExpr &Inline();
 };
 
 class WATWriter {
@@ -70,3 +69,9 @@ public:
 };
 
 std::string Quote(std::string in);
+template <typename... T> std::string Variable(T... components) {
+  std::stringstream out{};
+  out << "$";
+  (out << ... << components);
+  return out.str();
+}

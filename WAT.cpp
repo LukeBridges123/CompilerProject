@@ -1,5 +1,15 @@
 #include "WAT.hpp"
 
+void WATExpr::AddChildren(std::vector<WATExpr> new_children) {
+  std::move(new_children.begin(), new_children.end(),
+            std::back_inserter(children));
+};
+
+WATExpr &WATExpr::Inline() {
+  format.write_inline = true;
+  return *this;
+};
+
 std::string WATWriter::Indent() const { return std::string(curindent, ' '); }
 std::string WATWriter::Newline() const { return "\n" + Indent(); }
 
