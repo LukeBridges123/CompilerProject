@@ -163,6 +163,19 @@ std::vector<WATExpr> ASTNode::EmitOperation(SymbolTable const &symbols) const {
   //   message.append(literal);
   //   throw std::runtime_error(message);
   // }
+  std::vector<WATExpr> left = children.at(0).Emit(symbols);
+  std::vector<WATExpr> right = children.at(1).Emit(symbols);
+  if (literal == "+"){
+    WATExpr expr{"i32.add"};
+    expr.AddChildren(left);
+    expr.AddChildren(right);
+    return {expr};
+  } else if (literal == "*") {
+    WATExpr expr{"i32.mul"};
+    expr.AddChildren(left);
+    expr.AddChildren(right);
+    return {expr};
+  }
   ErrorNoLine("Not implemented");
 }
 
