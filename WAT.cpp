@@ -37,3 +37,5 @@ void WATWriter::Write(std::ostream &out, WATExpr const &expr) {
     out << std::endl;
   }
 }
+
+std::string Quote(std::string in) { return '"' + in + '"'; }

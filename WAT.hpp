@@ -67,3 +67,5 @@ private:
 public:
   void Write(std::ostream &out, WATExpr const &expr);
 };
+
+std::string Quote(std::string in);

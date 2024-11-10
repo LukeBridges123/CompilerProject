@@ -27,3 +27,15 @@ std::string Type::TypeName() const {
     throw std::invalid_argument("Attempt to access unknown type");
   }
 };
+
+std::string Type::WATType() const {
+  switch (id) {
+  case Type::INT:
+  case Type::CHAR:
+    return "i32";
+  case Type::DOUBLE:
+    return "f64";
+  default:
+    throw std::invalid_argument("Attempt to access unknown type");
+  }
+};

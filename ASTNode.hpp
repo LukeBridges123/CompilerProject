@@ -67,14 +67,14 @@ public:
     AddChild(std::forward<T>(node));
   }
 
-  WATExpr EmitModule(SymbolTable const &symbols);
-  std::vector<WATExpr> Emit(SymbolTable const &symbols);
-  std::vector<WATExpr> EmitLiteral(SymbolTable const &symbols);
-  std::vector<WATExpr> EmitScope(SymbolTable const &symbols);
-  std::vector<WATExpr> EmitAssign(SymbolTable const &symbols);
-  std::vector<WATExpr> EmitIdentifier(SymbolTable const &symbols);
-  std::vector<WATExpr> EmitConditional(SymbolTable const &symbols);
-  std::vector<WATExpr> EmitOperation(SymbolTable const &symbols);
-  std::vector<WATExpr> EmitWhile(SymbolTable const &symbols);
-  std::vector<WATExpr> EmitFunction(SymbolTable const &symbols);
+  WATExpr EmitModule(SymbolTable const &symbols) const;
+  std::vector<WATExpr> Emit(SymbolTable const &symbols) const;
+  std::vector<WATExpr> EmitLiteral(SymbolTable const &symbols) const;
+  std::vector<WATExpr> EmitScope(SymbolTable const &symbols) const;
+  std::vector<WATExpr> EmitAssign(SymbolTable const &symbols) const;
+  std::vector<WATExpr> EmitIdentifier(SymbolTable const &symbols) const;
+  std::vector<WATExpr> EmitConditional(SymbolTable const &symbols) const;
+  std::vector<WATExpr> EmitOperation(SymbolTable const &symbols) const;
+  std::vector<WATExpr> EmitWhile(SymbolTable const &symbols) const;
+  std::vector<WATExpr> EmitFunction(SymbolTable const &symbols) const;
 };

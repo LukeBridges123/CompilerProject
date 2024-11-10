@@ -75,7 +75,8 @@ private:
       Type var_type = ExpectToken(Lexer::ID_TYPE);
       Token var_name = ExpectToken(Lexer::ID_ID);
 
-      size_t var_id = table.AddVar(var_name.lexeme, var_name.line_id);
+      size_t var_id =
+          table.AddVar(var_name.lexeme, Type::DOUBLE, var_name.line_id);
       func_info.arguments.emplace_back(var_name.lexeme, var_id);
       IfToken(','); // consume comma if exists
     }
@@ -104,7 +105,7 @@ private:
     ExpectToken(Lexer::ID_VAR);
     Token const &ident = ExpectToken(Lexer::ID_ID);
     if (IfToken(Lexer::ID_ENDLINE)) {
-      table.AddVar(ident.lexeme, ident.line_id);
+      table.AddVar(ident.lexeme, Type::DOUBLE, ident.line_id);
       return ASTNode{};
     }
     ExpectToken(Lexer::ID_ASSIGN);
@@ -114,7 +115,7 @@ private:
 
     // don't add until _after_ we possibly resolve idents in expression
     // ex. var foo = foo should error if foo is undefined
-    size_t var_id = table.AddVar(ident.lexeme, ident.line_id);
+    size_t var_id = table.AddVar(ident.lexeme, Type::DOUBLE, ident.line_id);
 
     ASTNode out = ASTNode{ASTNode::ASSIGN};
     out.AddChildren(ASTNode(ASTNode::IDENTIFIER, var_id, &ident),
@@ -227,6 +228,11 @@ private:
     return ASTNode(ASTNode::OPERATION, "!", std::move(rhs));
   }
 
+  ASTNode ParseSqrt(){
+    auto inside = ParseExpr();
+    return ASTNode(ASTNode::OPERATION, "sqrt", std::move(inside));
+  }
+
   ASTNode ParseTerm() {
     Token const &current = CurToken();
     switch (current) {
@@ -252,6 +258,9 @@ private:
     case Lexer::ID_NOT:
       ConsumeToken();
       return ParseNOT();
+    case Lexer::ID_SQRT:
+      ConsumeToken();
+      return ParseSqrt();
     default:
       ErrorUnexpected(current);
     }
