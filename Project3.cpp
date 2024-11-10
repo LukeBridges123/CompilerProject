@@ -228,7 +228,7 @@ private:
     return ASTNode(ASTNode::OPERATION, "!", std::move(rhs));
   }
 
-  ASTNode ParseSqrt(){
+  ASTNode ParseSqrt() {
     auto inside = ParseExpr();
     return ASTNode(ASTNode::OPERATION, "sqrt", std::move(inside));
   }

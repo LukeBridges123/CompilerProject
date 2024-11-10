@@ -1,19 +1,20 @@
 #include "WAT.hpp"
 
 std::string WATWriter::Indent() const { return std::string(curindent, ' '); }
+std::string WATWriter::Newline() const { return "\n" + Indent(); }
 
 void WATWriter::Write(std::ostream &out, WATExpr const &expr) {
   // write comment
   if (expr.comment) {
-    out << Indent() << ";; " << expr.comment.value() << std::endl;
+    out << ";; " << expr.comment.value() << Newline();
   }
 
   /// write atom
-  out << Indent() << "(" << expr.atom;
+  out << "(" << expr.atom;
 
   curindent += INDENT;
 
-  std::string separator = expr.format.inline_attrs ? " " : ("\n" + Indent());
+  std::string separator = expr.format.inline_attrs ? " " : Newline();
   for (auto i = expr.attributes.cbegin(); i != expr.attributes.cend(); i++) {
     if (i != expr.attributes.cend())
       out << separator;
@@ -23,10 +24,10 @@ void WATWriter::Write(std::ostream &out, WATExpr const &expr) {
   /// write children
   for (size_t i = 0; i < expr.children.size(); i++) {
     WATExpr const &child = expr.children.at(i);
-    if (i >= child.format.inline_children) {
-      out << std::endl;
-    } else {
+    if (child.format.write_inline) {
       out << " ";
+    } else {
+      out << Newline();
     }
     Write(out, child);
   }
@@ -34,7 +35,7 @@ void WATWriter::Write(std::ostream &out, WATExpr const &expr) {
 
   out << ")";
   if (expr.format.newline) {
-    out << std::endl;
+    out << Newline();
   }
 }
 

@@ -9,10 +9,10 @@ constexpr int INDENT = 2;
 struct FormatOptions {
   // add a newline after expression
   bool newline = false;
+  // whether to write this expression inline with its parent
+  bool write_inline = false;
   // put attrs on same line as atom, instead of on separate lines
   bool inline_attrs = true;
-  // how many children to list inline
-  size_t inline_children = 0;
 };
 
 // separate vectors for arguments + children possibly isn't the best
@@ -63,6 +63,7 @@ class WATWriter {
 private:
   int curindent = 0;
   std::string Indent() const;
+  std::string Newline() const;
 
 public:
   void Write(std::ostream &out, WATExpr const &expr);

@@ -42,7 +42,8 @@ WATExpr ASTNode::EmitModule(SymbolTable const &symbols) const {
   }
   for (FunctionInfo const &func : symbols.functions) {
     WATExpr &export_expr = out.Child("export", Quote(func.name));
-    export_expr.Child("func", "$" + func.name);
+    WATExpr &export_func = export_expr.Child("func", "$" + func.name);
+    export_func.format.write_inline = true;
   }
   return out;
 }
