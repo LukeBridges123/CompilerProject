@@ -163,7 +163,29 @@ std::vector<WATExpr> ASTNode::EmitOperation(SymbolTable const &symbols) const {
   //   message.append(literal);
   //   throw std::runtime_error(message);
   // }
+  assert(children.size() >= 1);
   std::vector<WATExpr> left = children.at(0).Emit(symbols);
+
+  if (literal == "!"){
+    WATExpr cond{"if"};
+    WATExpr ret_type{"result i32"};
+    WATExpr ret0{"then", "i32.const 0"};
+    WATExpr ret1{"else", "i32.const 1"};
+
+    cond.AddChildren({ret_type});
+    cond.AddChildren({ret0});
+    cond.AddChildren({ret1});
+
+    std::vector<WATExpr> expr = left;
+    expr.push_back(cond);
+    return expr;
+  } else if (literal == "-"){
+    WATExpr expr{"i32.mul"};
+    WATExpr negative_one{"i32.const", "-1"};
+    left.insert(left.begin(), negative_one);
+    expr.AddChildren(left);
+    return {expr};
+  }
   std::vector<WATExpr> right = children.at(1).Emit(symbols);
   if (literal == "+"){
     WATExpr expr{"i32.add"};
@@ -172,6 +194,11 @@ std::vector<WATExpr> ASTNode::EmitOperation(SymbolTable const &symbols) const {
     return {expr};
   } else if (literal == "*") {
     WATExpr expr{"i32.mul"};
+    expr.AddChildren(left);
+    expr.AddChildren(right);
+    return {expr};
+  } else if (literal == "%"){
+    WATExpr expr{"i32.rem_u"};
     expr.AddChildren(left);
     expr.AddChildren(right);
     return {expr};
