@@ -76,7 +76,7 @@ private:
       Token var_name = ExpectToken(Lexer::ID_ID);
 
       size_t var_id =
-          table.AddVar(var_name.lexeme, Type::DOUBLE, var_name.line_id);
+          table.AddVar(var_name.lexeme, Type::INT, var_name.line_id);
       func_info.arguments.emplace_back(var_name.lexeme, var_id);
       IfToken(','); // consume comma if exists
     }

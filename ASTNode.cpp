@@ -77,6 +77,7 @@ std::vector<WATExpr> ASTNode::EmitIdentifier(SymbolTable const &symbols) const {
   // assert(literal == std::string{});
 
   // return symbols.GetValue(var_id, token);
+  return {WATExpr{"local.get", "$var" + std::to_string(this->var_id)}};
   ErrorNoLine("Not implemented");
 }
 
