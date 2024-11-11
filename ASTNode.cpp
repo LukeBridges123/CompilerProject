@@ -136,64 +136,6 @@ std::vector<WATExpr> ASTNode::EmitConditional(State &state) const {
 }
 
 std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
-  // node will have an operator (e.g. +, *, etc.) specified somewhere (maybe
-  // in the "literal"?) and one or two children run the child or children,
-  // apply the operator to the returned value(s), then return the result
-  // assert(children.size() >= 1);
-  // double left = children.at(0).EmitExpect(state.table);
-  // if (literal == "!") {
-  //   return left == 0 ? 1 : 0;
-  // }
-  // if (literal == "-" && children.size() == 1) {
-  //   return -1 * left;
-  // }
-  // assert(children.size() == 2);
-  // if (literal == "&&") {
-  //   if (!left)
-  //     return 0; // short-circuit when left is false
-  //   return children[1].EmitExpect(state.table) != 0;
-  // } else if (literal == "||") {
-  //   if (left)
-  //     return 1; // short-circuit when left is true
-  //   return children[1].EmitExpect(state.table) != 0;
-  // }
-  // // don't evaluate the right until you know you won't have to short-circuit
-  // double right = children.at(1).EmitExpect(state.table);
-  // if (literal == "**") {
-  //   return std::pow(left, right);
-  // } else if (literal == "*") {
-  //   return left * right;
-  // } else if (literal == "/") {
-  //   if (right == 0) {
-  //     ErrorNoLine("Division by zero");
-  //   }
-  //   return left / right;
-  // } else if (literal == "%") {
-  //   if (right == 0) {
-  //     ErrorNoLine("Modulus by zero");
-  //   }
-  //   return static_cast<int>(left) % static_cast<int>(right);
-  // } else if (literal == "+") {
-  //   return left + right;
-  // } else if (literal == "-") {
-  //   return left - right;
-  // } else if (literal == "<") {
-  //   return left < right;
-  // } else if (literal == ">") {
-  //   return left > right;
-  // } else if (literal == "<=") {
-  //   return left <= right;
-  // } else if (literal == ">=") {
-  //   return left >= right;
-  // } else if (literal == "==") {
-  //   return left == right;
-  // } else if (literal == "!=") {
-  //   return left != right;
-  // } else {
-  //   std::string message = "Tried to run unknown operator ";
-  //   message.append(literal);
-  //   throw std::runtime_error(message);
-  // }
   assert(children.size() >= 1);
   std::vector<WATExpr> left = children.at(0).Emit(state);
 
@@ -216,8 +158,14 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     expr.AddChildren({negative_one});
     expr.AddChildren(left);
     return expr;
+  } else if (literal == "sqrt") {
+    ErrorNoLine("Not implemeneted");
   }
+
+  // remaining operations are binary operations
+  assert(children.size() == 2);
   std::vector<WATExpr> right = children.at(1).Emit(state);
+
   if (literal == "+") {
     WATExpr expr{"i32.add"};
     expr.AddChildren(left);
