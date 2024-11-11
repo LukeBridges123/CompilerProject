@@ -41,17 +41,17 @@ WATExpr ASTNode::EmitModule(SymbolTable const &symbols) const {
     out.AddChildren(child.Emit(symbols));
   }
   for (FunctionInfo const &func : symbols.functions) {
-    WATExpr &export_expr = out.Child("export", Quote(func.name));
-    export_expr.Child("func", "$" + func.name);
+    out.Child("export", Quote(func.name))
+        .Child("func", Variable(func.name))
+        .Inline();
   }
   return out;
 }
 
 std::vector<WATExpr> ASTNode::EmitLiteral(SymbolTable const &symbols) const {
-  return {WATExpr{"i32.const", // TODO: use real type
-                  {std::format("{}", value)},
-                  {},
-                  "Literal value"}};
+  WATExpr literal{"i32.const", std::format("{}", value)};
+  literal.comment = "Literal value";
+  return {literal};
 }
 
 std::vector<WATExpr> ASTNode::EmitScope(SymbolTable const &symbols) const {
@@ -286,17 +286,18 @@ std::vector<WATExpr> ASTNode::EmitWhile(SymbolTable const &symbols) const {
 
 std::vector<WATExpr> ASTNode::EmitFunction(SymbolTable const &symbols) const {
   FunctionInfo const &info = symbols.functions.at(var_id);
-  WATExpr function{"func", "$" + info.name};
+  WATExpr function{"func", Variable(info.name)};
+  function.format.newline = true;
   for (auto const &[name, var_id] : info.arguments) {
     VariableInfo const &var_info = symbols.variables.at(var_id);
-    function.Child("param", "$var" + std::to_string(var_id),
-                   var_info.type.WATType());
+    function.Child("param", Variable("var", var_id), var_info.type.WATType())
+        .Inline();
   }
   // add result to function and its exit block
-  WATExpr result{"result", info.rettype.WATType()};
+  WATExpr result = WATExpr("result", info.rettype.WATType()).Inline();
   function.Child(result);
 
-  WATExpr &block = function.Child("block", "$fun_exit");
+  WATExpr &block = function.Child("block", Variable("fun_exit"));
   block.Child(result);
 
   for (ASTNode const &child : children) {
