@@ -61,7 +61,14 @@ std::vector<WATExpr> ASTNode::EmitScope(SymbolTable const &symbols) const {
   // for (ASTNode &child : children) {
   //   child.Emit(symbols);
   // }
-  ErrorNoLine("Not implemented");
+  std::vector<WATExpr> new_scope{};
+  for (ASTNode const &child : children){
+    std::vector<WATExpr> child_exprs = child.Emit(symbols);
+    for (WATExpr expr : child_exprs){
+      new_scope.push_back(expr);
+    }
+  }
+  return new_scope;
 }
 
 std::vector<WATExpr> ASTNode::EmitAssign(SymbolTable const &symbols) const {
