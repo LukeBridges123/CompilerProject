@@ -1,13 +1,12 @@
 #pragma once
 
 #include <cmath>
-#include <sstream>
-#include <stdexcept>
 #include <string>
 #include <vector>
 
-#include "Error.hpp"
 #include "SymbolTable.hpp"
+#include "WAT.hpp"
+
 class ASTNode {
 
 private:
@@ -16,14 +15,17 @@ private:
 public:
   enum Type {
     EMPTY = 0,
+    MODULE,
     SCOPE,
     ASSIGN,
     IDENTIFIER,
     CONDITIONAL,
     OPERATION,
-    NUMBER,
+    LITERAL,
     WHILE,
-    STRING
+    STRING,
+    FUNCTION,
+    RETURN // TODO: should return actually be a node?
   };
   Type const type;
   double value{};
@@ -65,13 +67,14 @@ public:
     AddChild(std::forward<T>(node));
   }
 
-  std::optional<double> Emit(SymbolTable &symbols);
-  double EmitExpect(SymbolTable &symbols);
-
-  void EmitScope(SymbolTable &symbols);
-  double EmitAssign(SymbolTable &symbols);
-  double EmitIdentifier(SymbolTable &symbols);
-  void EmitConditional(SymbolTable &symbols);
-  double EmitOperation(SymbolTable &symbols);
-  void EmitWhile(SymbolTable &symbols);
+  WATExpr EmitModule(SymbolTable const &symbols) const;
+  std::vector<WATExpr> Emit(SymbolTable const &symbols) const;
+  std::vector<WATExpr> EmitLiteral(SymbolTable const &symbols) const;
+  std::vector<WATExpr> EmitScope(SymbolTable const &symbols) const;
+  std::vector<WATExpr> EmitAssign(SymbolTable const &symbols) const;
+  std::vector<WATExpr> EmitIdentifier(SymbolTable const &symbols) const;
+  std::vector<WATExpr> EmitConditional(SymbolTable const &symbols) const;
+  std::vector<WATExpr> EmitOperation(SymbolTable const &symbols) const;
+  std::vector<WATExpr> EmitWhile(SymbolTable const &symbols) const;
+  std::vector<WATExpr> EmitFunction(SymbolTable const &symbols) const;
 };

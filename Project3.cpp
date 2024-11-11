@@ -1,4 +1,5 @@
 #include <cassert>
+#include <format>
 #include <fstream>
 #include <memory>
 #include <string>
@@ -8,6 +9,8 @@
 #include "ASTNode.hpp"
 #include "Error.hpp"
 #include "SymbolTable.hpp"
+#include "Type.hpp"
+#include "WAT.hpp"
 #include "lexer.hpp"
 
 using namespace emplex;
@@ -18,7 +21,7 @@ private:
   emplex::Lexer lexer{};
   SymbolTable table{};
   size_t token_idx{0};
-  ASTNode root{ASTNode::SCOPE};
+  ASTNode root{ASTNode::MODULE};
 
   Token const &CurToken() const {
     if (token_idx >= tokens.size())
@@ -47,15 +50,53 @@ private:
     return nullptr;
   }
 
-  ASTNode ParseScope() {
-    ExpectToken(Lexer::ID_SCOPE_Start);
-    ASTNode scope{ASTNode::SCOPE};
-    table.PushScope();
-
+  void ParseBlock(ASTNode &block) {
+    ExpectToken(Lexer::ID_SCOPE_START);
     while (CurToken() != Lexer::ID_SCOPE_END) {
-      scope.AddChild(ParseStatement());
+      block.AddChild(ParseStatement());
     }
     ConsumeToken();
+  }
+
+  ASTNode ParseFunction() {
+    ExpectToken(Lexer::ID_FUNCTION);
+
+    Token func_name = ExpectToken(Lexer::ID_ID);
+    size_t func_id = table.AddFunction(func_name.lexeme, func_name.line_id);
+    FunctionInfo &func_info = table.functions.at(func_id);
+    ASTNode function{ASTNode::FUNCTION, func_id, &func_name};
+
+    table.PushScope();
+
+    ExpectToken(Lexer::ID_OPEN_PARENTHESIS);
+
+    // parse arguments
+    while (CurToken() != Lexer::ID_CLOSE_PARENTHESIS) {
+      Type var_type = ExpectToken(Lexer::ID_TYPE);
+      Token var_name = ExpectToken(Lexer::ID_ID);
+
+      size_t var_id =
+          table.AddVar(var_name.lexeme, var_type, var_name.line_id);
+      func_info.arguments.emplace_back(var_name.lexeme, var_id);
+      IfToken(','); // consume comma if exists
+    }
+    ConsumeToken(); // close parenthesis
+
+    // parse return type
+    ExpectToken(':');
+    func_info.rettype = ExpectToken(Lexer::ID_TYPE);
+
+    // parse body
+    ParseBlock(function);
+
+    table.PopScope();
+    return function;
+  }
+
+  ASTNode ParseScope() {
+    ASTNode scope{ASTNode::SCOPE};
+    table.PushScope();
+    ParseBlock(scope);
     table.PopScope();
     return scope;
   }
@@ -64,7 +105,7 @@ private:
     ExpectToken(Lexer::ID_VAR);
     Token const &ident = ExpectToken(Lexer::ID_ID);
     if (IfToken(Lexer::ID_ENDLINE)) {
-      table.AddVar(ident.lexeme, ident.line_id);
+      table.AddVar(ident.lexeme, Type::DOUBLE, ident.line_id);
       return ASTNode{};
     }
     ExpectToken(Lexer::ID_ASSIGN);
@@ -74,7 +115,7 @@ private:
 
     // don't add until _after_ we possibly resolve idents in expression
     // ex. var foo = foo should error if foo is undefined
-    size_t var_id = table.AddVar(ident.lexeme, ident.line_id);
+    size_t var_id = table.AddVar(ident.lexeme, Type::DOUBLE, ident.line_id);
 
     ASTNode out = ASTNode{ASTNode::ASSIGN};
     out.AddChildren(ASTNode(ASTNode::IDENTIFIER, var_id, &ident),
@@ -155,17 +196,18 @@ private:
   }
 
   ASTNode ParseMulDivMod() {
-    auto lhs = std::make_unique<ASTNode>(ParseExponentiation());
+    auto lhs = std::make_unique<ASTNode>(ParseTerm());
     while (CurToken().lexeme == "*" || CurToken().lexeme == "/" ||
            CurToken().lexeme == "%") {
       std::string operation = ConsumeToken().lexeme;
-      ASTNode rhs = ParseExponentiation();
+      ASTNode rhs = ParseTerm();
       lhs = std::make_unique<ASTNode>(ASTNode(ASTNode::OPERATION, operation,
                                               std::move(*lhs), std::move(rhs)));
     }
     return ASTNode{std::move(*lhs)};
   }
 
+/*
   ASTNode ParseExponentiation() {
     ASTNode lhs = ParseTerm();
     if (CurToken().lexeme == "**") {
@@ -175,9 +217,10 @@ private:
     }
     return lhs;
   }
+*/
 
   ASTNode ParseNegate() {
-    auto lhs = std::make_unique<ASTNode>(ASTNode::NUMBER, -1);
+    auto lhs = std::make_unique<ASTNode>(ASTNode::LITERAL, -1);
     auto rhs = ParseTerm();
     return ASTNode(ASTNode::OPERATION, "*", std::move(*lhs), std::move(rhs));
   }
@@ -187,11 +230,17 @@ private:
     return ASTNode(ASTNode::OPERATION, "!", std::move(rhs));
   }
 
+  ASTNode ParseSqrt(){
+    auto inside = ParseExpr();
+    return ASTNode(ASTNode::OPERATION, "sqrt", std::move(inside));
+  }
+
   ASTNode ParseTerm() {
     Token const &current = CurToken();
     switch (current) {
-    case Lexer::ID_NUMBER:
-      return ASTNode(ASTNode::NUMBER, std::stod(ConsumeToken().lexeme));
+    case Lexer::ID_FLOAT:
+    case Lexer::ID_INT:
+      return ASTNode(ASTNode::LITERAL, std::stod(ConsumeToken().lexeme));
     case Lexer::ID_ID:
       return ASTNode(ASTNode::IDENTIFIER,
                      table.FindVar(ConsumeToken().lexeme, current.line_id),
@@ -211,6 +260,9 @@ private:
     case Lexer::ID_NOT:
       ConsumeToken();
       return ParseNOT();
+    case Lexer::ID_SQRT:
+      ConsumeToken();
+      return ParseSqrt();
     default:
       ErrorUnexpected(current);
     }
@@ -259,13 +311,23 @@ private:
   ASTNode ParseStatement() {
     Token const &current = CurToken();
     switch (current) {
-    case Lexer::ID_SCOPE_Start:
+    case Lexer::ID_FUNCTION:
+      return ParseFunction();
+    case Lexer::ID_SCOPE_START:
       return ParseScope();
     case Lexer::ID_VAR:
       return ParseDecl();
     case Lexer::ID_ID:
-    case Lexer::ID_NUMBER: {
+    case Lexer::ID_FLOAT:
+    case Lexer::ID_INT: {
       ASTNode node = ParseExpr();
+      ExpectToken(Lexer::ID_ENDLINE);
+      return node;
+    }
+    case Lexer::ID_RETURN: {
+      ASTNode node = ASTNode{ASTNode::RETURN};
+      ConsumeToken();
+      node.AddChild(ParseExpr());
       ExpectToken(Lexer::ID_ENDLINE);
       return node;
     }
@@ -290,7 +352,7 @@ public:
     }
   }
 
-  void Execute() { root.Emit(table); }
+  WATExpr GenerateCode() { return root.EmitModule(table); }
 };
 
 int main(int argc, char *argv[]) {
@@ -298,14 +360,16 @@ int main(int argc, char *argv[]) {
     ErrorNoLine("Format: ", argv[0], " [filename]");
   }
 
-  std::string filename = argv[1];
-
-  std::ifstream in_file(filename);
+  std::string filename{argv[1]};
+  std::ifstream in_file{filename};
   if (in_file.fail()) {
     ErrorNoLine("Unable to open file '", filename, "'.");
   }
 
   Tubular tube{in_file};
   tube.Parse();
-  tube.Execute();
+  WATExpr wat = tube.GenerateCode();
+
+  WATWriter writer;
+  writer.Write(std::cout, wat);
 }
