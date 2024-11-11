@@ -76,7 +76,7 @@ private:
       Token var_name = ExpectToken(Lexer::ID_ID);
 
       size_t var_id =
-          table.AddVar(var_name.lexeme, Type::DOUBLE, var_name.line_id);
+          table.AddVar(var_name.lexeme, var_type, var_name.line_id);
       func_info.arguments.emplace_back(var_name.lexeme, var_id);
       IfToken(','); // consume comma if exists
     }
@@ -196,17 +196,18 @@ private:
   }
 
   ASTNode ParseMulDivMod() {
-    auto lhs = std::make_unique<ASTNode>(ParseExponentiation());
+    auto lhs = std::make_unique<ASTNode>(ParseTerm());
     while (CurToken().lexeme == "*" || CurToken().lexeme == "/" ||
            CurToken().lexeme == "%") {
       std::string operation = ConsumeToken().lexeme;
-      ASTNode rhs = ParseExponentiation();
+      ASTNode rhs = ParseTerm();
       lhs = std::make_unique<ASTNode>(ASTNode(ASTNode::OPERATION, operation,
                                               std::move(*lhs), std::move(rhs)));
     }
     return ASTNode{std::move(*lhs)};
   }
 
+/*
   ASTNode ParseExponentiation() {
     ASTNode lhs = ParseTerm();
     if (CurToken().lexeme == "**") {
@@ -216,6 +217,7 @@ private:
     }
     return lhs;
   }
+*/
 
   ASTNode ParseNegate() {
     auto lhs = std::make_unique<ASTNode>(ASTNode::LITERAL, -1);
