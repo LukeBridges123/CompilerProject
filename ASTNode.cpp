@@ -51,10 +51,9 @@ WATExpr ASTNode::EmitModule(State &state) const {
 }
 
 std::vector<WATExpr> ASTNode::EmitLiteral(State &state) const {
-  WATExpr literal{"i32.const", std::format("{}", value)};
-  literal.comment = "Literal value";
-  literal.format.write_inline = true;
-  return {literal};
+  return WATExpr("i32.const", std::format("{}", value))
+      .Comment("Literal value")
+      .Inline();
 }
 
 std::vector<WATExpr> ASTNode::EmitScope(State &state) const {
@@ -82,17 +81,11 @@ std::vector<WATExpr> ASTNode::EmitAssign(State &state) const {
   // rvalue on the stack
   WATExpr rvalue = (children[1].Emit(state))[0];
 
-  return {
-      WATExpr{"local.set", {Variable("var", children[0].var_id)}, {rvalue}}};
+  return WATExpr{"local.set", {Variable("var", children[0].var_id)}, {rvalue}};
 }
 
 std::vector<WATExpr> ASTNode::EmitIdentifier(State &state) const {
-  // assert(value == double{});
-  // assert(literal == std::string{});
-
-  // return state.table.GetValue(var_id, token);
-  return {WATExpr{"local.get", Variable("var", std::to_string(this->var_id))}};
-  ErrorNoLine("Not implemented");
+  return WATExpr{"local.get", Variable("var", var_id)};
 }
 
 std::vector<WATExpr> ASTNode::EmitConditional(State &state) const {
@@ -221,50 +214,50 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     WATExpr negative_one{"i32.const", "-1"};
     expr.AddChildren({negative_one});
     expr.AddChildren(left);
-    return {expr};
+    return expr;
   }
   std::vector<WATExpr> right = children.at(1).Emit(state);
   if (literal == "+") {
     WATExpr expr{"i32.add"};
     expr.AddChildren(left);
     expr.AddChildren(right);
-    return {expr};
+    return expr;
   } else if (literal == "-") {
     WATExpr expr{"i32.sub"};
     expr.AddChildren(left);
     expr.AddChildren(right);
-    return {expr};
+    return expr;
   } else if (literal == "*") {
     WATExpr expr{"i32.mul"};
     expr.AddChildren(left);
     expr.AddChildren(right);
-    return {expr};
+    return expr;
     // handle division later
   } else if (literal == "%") {
     WATExpr expr{"i32.rem_u"};
     expr.AddChildren(left);
     expr.AddChildren(right);
-    return {expr};
+    return expr;
   } else if (literal == "<") {
     WATExpr expr{"i32.lt_s"};
     expr.AddChildren(left);
     expr.AddChildren(right);
-    return {expr};
+    return expr;
   } else if (literal == ">") {
     WATExpr expr{"i32.gt_s"};
     expr.AddChildren(left);
     expr.AddChildren(right);
-    return {expr};
+    return expr;
   } else if (literal == "<=") {
     WATExpr expr{"i32.le_s"};
     expr.AddChildren(left);
     expr.AddChildren(right);
-    return {expr};
+    return expr;
   } else if (literal == ">=") {
     WATExpr expr{"i32.ge_s"};
     expr.AddChildren(left);
     expr.AddChildren(right);
-    return {expr};
+    return expr;
   }
   ErrorNoLine("Not implemented");
 }
@@ -296,7 +289,7 @@ std::vector<WATExpr> ASTNode::EmitWhile(State &state) const {
 
   state.loop_idx.pop_back();
 
-  return {block};
+  return block;
 }
 
 std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {
@@ -318,5 +311,5 @@ std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {
   for (ASTNode const &child : children) {
     block.AddChildren(child.Emit(state));
   }
-  return {function};
+  return function;
 }
