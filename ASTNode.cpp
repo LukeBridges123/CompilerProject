@@ -69,6 +69,15 @@ std::vector<WATExpr> ASTNode::EmitAssign(SymbolTable const &symbols) const {
   // double rvalue = children.at(1).EmitExpect(symbols);
   // symbols.SetValue(children.at(0).var_id, rvalue);
   // return rvalue;
+
+  assert(children.size() == 2);
+  assert(children[0].type == IDENTIFIER);
+
+  std::string var_name = "$var" + std::to_string(children[0].var_id);
+  WATExpr rvalue = (children[1].Emit(symbols))[0]; // this should produce some code which, when run, leaves the rvalue on the stack
+  
+  return {WATExpr{"local.set", {var_name}, {rvalue}}};
+
   ErrorNoLine("Not implemented");
 }
 
@@ -101,7 +110,30 @@ ASTNode::EmitConditional(SymbolTable const &symbols) const {
   // }
 
   // children[2].Emit(symbols);
-  ErrorNoLine("Not implemented");
+  assert(children.size() == 2 || children.size() == 3);
+  std::vector<WATExpr> condition = children[0].Emit(symbols);
+  WATExpr if_then_else{"if"};
+
+  if (children.size() == 3 && children[1].type == RETURN && children[2].type == RETURN){
+    if_then_else.Child(WATExpr{"result", "i32"}); // another awful hack
+  }
+
+  WATExpr then = WATExpr{"then", {}, children[1].Emit(symbols)};
+  if (children[1].type == RETURN){
+    then.Child(WATExpr{"br", "$fun_exit"}); // awful hack
+  }
+  if_then_else.Child(then);
+  if (children.size() == 3){
+    WATExpr else_expr{"else", {}, children[2].Emit(symbols)};
+    if (children[1].type == RETURN){
+      else_expr.Child(WATExpr{"br", "$fun_exit"}); // awful hack
+    }
+    if_then_else.Child(else_expr);
+  }
+  condition.push_back(if_then_else);
+  return condition;
+
+  // ErrorNoLine("Not implemented");
 }
 
 std::vector<WATExpr> ASTNode::EmitOperation(SymbolTable const &symbols) const {
@@ -209,7 +241,22 @@ std::vector<WATExpr> ASTNode::EmitOperation(SymbolTable const &symbols) const {
     expr.AddChildren(right);
     return {expr};
   } else if (literal == "<") {
-    WATExpr expr{"i32.lt"};
+    WATExpr expr{"i32.lt_s"};
+    expr.AddChildren(left);
+    expr.AddChildren(right);
+    return {expr};
+  } else if (literal == ">") {
+    WATExpr expr{"i32.gt_s"};
+    expr.AddChildren(left);
+    expr.AddChildren(right);
+    return {expr};
+  } else if (literal == "<="){
+    WATExpr expr{"i32.le_s"};
+    expr.AddChildren(left);
+    expr.AddChildren(right);
+    return {expr};
+  } else if (literal == ">="){
+    WATExpr expr{"i32.ge_s"};
     expr.AddChildren(left);
     expr.AddChildren(right);
     return {expr};
