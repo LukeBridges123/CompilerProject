@@ -75,8 +75,7 @@ private:
       Type var_type = ExpectToken(Lexer::ID_TYPE);
       Token var_name = ExpectToken(Lexer::ID_ID);
 
-      size_t var_id =
-          table.AddVar(var_name.lexeme, var_type, var_name.line_id);
+      size_t var_id = table.AddVar(var_name.lexeme, var_type, var_name.line_id);
       func_info.arguments.emplace_back(var_name.lexeme, var_id);
       IfToken(','); // consume comma if exists
     }
@@ -207,17 +206,18 @@ private:
     return ASTNode{std::move(*lhs)};
   }
 
-/*
-  ASTNode ParseExponentiation() {
-    ASTNode lhs = ParseTerm();
-    if (CurToken().lexeme == "**") {
-      ConsumeToken();
-      ASTNode rhs = ParseExponentiation();
-      return ASTNode(ASTNode::OPERATION, "**", std::move(lhs), std::move(rhs));
+  /*
+    ASTNode ParseExponentiation() {
+      ASTNode lhs = ParseTerm();
+      if (CurToken().lexeme == "**") {
+        ConsumeToken();
+        ASTNode rhs = ParseExponentiation();
+        return ASTNode(ASTNode::OPERATION, "**", std::move(lhs),
+    std::move(rhs));
+      }
+      return lhs;
     }
-    return lhs;
-  }
-*/
+  */
 
   ASTNode ParseNegate() {
     auto lhs = std::make_unique<ASTNode>(ASTNode::LITERAL, -1);

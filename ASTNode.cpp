@@ -62,9 +62,9 @@ std::vector<WATExpr> ASTNode::EmitScope(SymbolTable const &symbols) const {
   //   child.Emit(symbols);
   // }
   std::vector<WATExpr> new_scope{};
-  for (ASTNode const &child : children){
+  for (ASTNode const &child : children) {
     std::vector<WATExpr> child_exprs = child.Emit(symbols);
-    for (WATExpr expr : child_exprs){
+    for (WATExpr expr : child_exprs) {
       new_scope.push_back(expr);
     }
   }
@@ -81,8 +81,10 @@ std::vector<WATExpr> ASTNode::EmitAssign(SymbolTable const &symbols) const {
   assert(children[0].type == IDENTIFIER);
 
   std::string var_name = "$var" + std::to_string(children[0].var_id);
-  WATExpr rvalue = (children[1].Emit(symbols))[0]; // this should produce some code which, when run, leaves the rvalue on the stack
-  
+  WATExpr rvalue = (children[1].Emit(
+      symbols))[0]; // this should produce some code which, when run, leaves the
+                    // rvalue on the stack
+
   return {WATExpr{"local.set", {var_name}, {rvalue}}};
 
   ErrorNoLine("Not implemented");
@@ -121,18 +123,19 @@ ASTNode::EmitConditional(SymbolTable const &symbols) const {
   std::vector<WATExpr> condition = children[0].Emit(symbols);
   WATExpr if_then_else{"if"};
 
-  if (children.size() == 3 && children[1].type == RETURN && children[2].type == RETURN){
+  if (children.size() == 3 && children[1].type == RETURN &&
+      children[2].type == RETURN) {
     if_then_else.Child(WATExpr{"result", "i32"}); // another awful hack
   }
 
   WATExpr then = WATExpr{"then", {}, children[1].Emit(symbols)};
-  if (children[1].type == RETURN){
+  if (children[1].type == RETURN) {
     then.Child(WATExpr{"br", "$fun_exit"}); // awful hack
   }
   if_then_else.Child(then);
-  if (children.size() == 3){
+  if (children.size() == 3) {
     WATExpr else_expr{"else", {}, children[2].Emit(symbols)};
-    if (children[1].type == RETURN){
+    if (children[1].type == RETURN) {
       else_expr.Child(WATExpr{"br", "$fun_exit"}); // awful hack
     }
     if_then_else.Child(else_expr);
@@ -205,7 +208,7 @@ std::vector<WATExpr> ASTNode::EmitOperation(SymbolTable const &symbols) const {
   assert(children.size() >= 1);
   std::vector<WATExpr> left = children.at(0).Emit(symbols);
 
-  if (literal == "!"){
+  if (literal == "!") {
     WATExpr cond{"if"};
     WATExpr ret_type{"result i32"};
     WATExpr ret0{"then", "i32.const 0"};
@@ -218,7 +221,7 @@ std::vector<WATExpr> ASTNode::EmitOperation(SymbolTable const &symbols) const {
     std::vector<WATExpr> expr = left;
     expr.push_back(cond);
     return expr;
-  } else if (literal == "-"){
+  } else if (literal == "-") {
     WATExpr expr{"i32.mul"};
     WATExpr negative_one{"i32.const", "-1"};
     expr.AddChildren({negative_one});
@@ -226,7 +229,7 @@ std::vector<WATExpr> ASTNode::EmitOperation(SymbolTable const &symbols) const {
     return {expr};
   }
   std::vector<WATExpr> right = children.at(1).Emit(symbols);
-  if (literal == "+"){
+  if (literal == "+") {
     WATExpr expr{"i32.add"};
     expr.AddChildren(left);
     expr.AddChildren(right);
@@ -241,8 +244,8 @@ std::vector<WATExpr> ASTNode::EmitOperation(SymbolTable const &symbols) const {
     expr.AddChildren(left);
     expr.AddChildren(right);
     return {expr};
-  // handle division later
-  } else if (literal == "%"){
+    // handle division later
+  } else if (literal == "%") {
     WATExpr expr{"i32.rem_u"};
     expr.AddChildren(left);
     expr.AddChildren(right);
@@ -257,12 +260,12 @@ std::vector<WATExpr> ASTNode::EmitOperation(SymbolTable const &symbols) const {
     expr.AddChildren(left);
     expr.AddChildren(right);
     return {expr};
-  } else if (literal == "<="){
+  } else if (literal == "<=") {
     WATExpr expr{"i32.le_s"};
     expr.AddChildren(left);
     expr.AddChildren(right);
     return {expr};
-  } else if (literal == ">="){
+  } else if (literal == ">=") {
     WATExpr expr{"i32.ge_s"};
     expr.AddChildren(left);
     expr.AddChildren(right);
