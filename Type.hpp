@@ -1,5 +1,6 @@
 #pragma once
 #include "lexer.hpp"
+#include "Value.hpp"
 #include <string>
 
 using namespace emplex;
@@ -18,6 +19,7 @@ public:
 
   Type(TypeId id) : id(id) {};
   Type(Token const &token);
+  Type(Value const &value);
 
   std::string TypeName() const;
   std::string WATType() const;
