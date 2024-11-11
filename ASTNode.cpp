@@ -286,9 +286,9 @@ std::vector<WATExpr> ASTNode::EmitWhile(State &state) const {
   // construct conditional
   std::vector<WATExpr> condition = children.at(0).Emit(state);
   loop.Child("br_if", loop_exit)
-      .Comment("Check while loop condition")
+      .Comment("Check while loop condition", false)
       .Child("i32.eqz")
-      .Comment("Invert condition, break if condition false")
+      .Comment("Invert condition, break if condition false", false)
       .AddChildren(condition);
 
   loop.AddChildren(children.at(1).Emit(state));
