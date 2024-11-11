@@ -15,6 +15,16 @@ Type::Type(Token const &token) {
   }
 }
 
+Type::Type(Value &value){
+  auto val = *(value.getValue());
+  if (std::holds_alternative<int>(val)){ id = Type::INT; }
+  else if (std::holds_alternative<double>(val)){ id = Type::DOUBLE; }
+  else if (std::holds_alternative<char>(val)){ id = Type::CHAR; }
+  else {
+    Error(value.getDeclaredLine(), "Unknown type!");
+  }
+}
+
 std::string Type::TypeName() const {
   switch (id) {
   case Type::INT:

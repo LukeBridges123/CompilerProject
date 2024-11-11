@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "Type.hpp"
+#include "Value.hpp"
 
 struct VariableInfo {
   std::string name{};
@@ -30,7 +31,7 @@ private:
   std::optional<size_t> FindVarMaybe(std::string const &name) const;
 
 public:
-  std::vector<VariableInfo> variables{};
+  std::vector<Value> variables{};
   std::vector<FunctionInfo> functions{};
 
   void PushScope();
