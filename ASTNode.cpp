@@ -72,22 +72,15 @@ std::vector<WATExpr> ASTNode::EmitScope(SymbolTable const &symbols) const {
 }
 
 std::vector<WATExpr> ASTNode::EmitAssign(SymbolTable const &symbols) const {
-  // assert(children.size() == 2);
-  // double rvalue = children.at(1).EmitExpect(symbols);
-  // symbols.SetValue(children.at(0).var_id, rvalue);
-  // return rvalue;
-
   assert(children.size() == 2);
   assert(children[0].type == IDENTIFIER);
 
-  std::string var_name = "$var" + std::to_string(children[0].var_id);
-  WATExpr rvalue = (children[1].Emit(
-      symbols))[0]; // this should produce some code which, when run, leaves the
-                    // rvalue on the stack
+  // this should produce some code which, when run, leaves the
+  // rvalue on the stack
+  WATExpr rvalue = (children[1].Emit(symbols))[0];
 
-  return {WATExpr{"local.set", {var_name}, {rvalue}}};
-
-  ErrorNoLine("Not implemented");
+  return {
+      WATExpr{"local.set", {Variable("var", children[0].var_id)}, {rvalue}}};
 }
 
 std::vector<WATExpr> ASTNode::EmitIdentifier(SymbolTable const &symbols) const {
@@ -95,7 +88,7 @@ std::vector<WATExpr> ASTNode::EmitIdentifier(SymbolTable const &symbols) const {
   // assert(literal == std::string{});
 
   // return symbols.GetValue(var_id, token);
-  return {WATExpr{"local.get", "$var" + std::to_string(this->var_id)}};
+  return {WATExpr{"local.get", Variable("var", std::to_string(this->var_id))}};
   ErrorNoLine("Not implemented");
 }
 
@@ -130,13 +123,13 @@ ASTNode::EmitConditional(SymbolTable const &symbols) const {
 
   WATExpr then = WATExpr{"then", {}, children[1].Emit(symbols)};
   if (children[1].type == RETURN) {
-    then.Child(WATExpr{"br", "$fun_exit"}); // awful hack
+    then.Child(WATExpr{"return"}); // awful hack
   }
   if_then_else.Child(then);
   if (children.size() == 3) {
     WATExpr else_expr{"else", {}, children[2].Emit(symbols)};
     if (children[1].type == RETURN) {
-      else_expr.Child(WATExpr{"br", "$fun_exit"}); // awful hack
+      else_expr.Child(WATExpr{"return"}); // awful hack
     }
     if_then_else.Child(else_expr);
   }
