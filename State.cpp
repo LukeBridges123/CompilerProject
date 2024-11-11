@@ -17,13 +17,16 @@ std::optional<size_t> SymbolTable::FindVarMaybe(std::string const &name) const {
 
 void SymbolTable::PushScope() { this->scope_stack.emplace_back(); }
 
-void SymbolTable::PopScope() {
+scope_t SymbolTable::PopScope() {
   if (scope_stack.size() == 0) {
     throw std::runtime_error("tried to pop nonexistent scope");
   } else if (scope_stack.size() == 1) {
     throw std::runtime_error("tried to pop outermost scope");
   }
+
+  scope_t back = scope_stack.back();
   scope_stack.pop_back();
+  return back;
 }
 
 size_t SymbolTable::FindVar(std::string const &name, size_t line_num) const {

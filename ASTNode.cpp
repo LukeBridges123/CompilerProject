@@ -1,4 +1,5 @@
 #include <format>
+#include <ranges>
 #include <stdexcept>
 
 #include "ASTNode.hpp"
@@ -296,14 +297,24 @@ std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {
   FunctionInfo const &info = state.table.functions.at(var_id);
   WATExpr function{"func", Variable(info.name)};
   function.format.newline = true;
-  for (auto const &[name, var_id] : info.arguments) {
+
+  // write out parameters (first info.parameters values in info.variables)
+  for (size_t var_id : info.variables | std::views::take(info.parameters)) {
     VariableInfo const &var_info = state.table.variables.at(var_id);
     function.Child("param", Variable("var", var_id), var_info.type.WATType())
         .Inline();
   }
+
   // add result to function and its exit block
   WATExpr result = WATExpr("result", info.rettype.WATType()).Inline();
   function.Child(result);
+
+  // write out locals (remaining values in info.variables)
+  for (size_t var_id : info.variables | std::views::drop(info.parameters)) {
+    VariableInfo const &var_info = state.table.variables.at(var_id);
+    function.Child("local", Variable("var", var_id), var_info.type.WATType())
+        .Comment("Declare " + var_info.type.TypeName() + " " + var_info.name);
+  }
 
   WATExpr &block = function.Child("block", Variable("fun_exit"));
   block.Child(result);

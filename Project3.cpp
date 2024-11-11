@@ -1,7 +1,9 @@
 #include <cassert>
 #include <format>
 #include <fstream>
+#include <functional>
 #include <memory>
+#include <ranges>
 #include <string>
 
 #include <vector>
@@ -75,8 +77,9 @@ private:
       Type var_type = ExpectToken(Lexer::ID_TYPE);
       Token var_name = ExpectToken(Lexer::ID_ID);
 
-      size_t var_id = table.AddVar(var_name.lexeme, var_type, var_name.line_id);
-      func_info.arguments.emplace_back(var_name.lexeme, var_id);
+      table.AddVar(var_name.lexeme, var_type, var_name.line_id);
+      func_info.parameters++;
+
       IfToken(','); // consume comma if exists
     }
     ConsumeToken(); // close parenthesis
@@ -88,7 +91,14 @@ private:
     // parse body
     ParseBlock(function);
 
-    table.PopScope();
+    // store which variables are associated with this function.
+    // sort them now, since we'll need them in order when writing out
+    // declarations later
+    std::ranges::copy(table.PopScope() |
+                          std::views::transform(&scope_t::value_type::second),
+                      std::back_inserter(func_info.variables));
+    std::ranges::sort(func_info.variables);
+
     return function;
   }
 

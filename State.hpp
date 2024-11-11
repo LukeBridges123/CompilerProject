@@ -2,12 +2,13 @@
 
 #include <cassert>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 #include "Type.hpp"
+
+using scope_t = std::unordered_map<std::string, size_t>;
 
 struct VariableInfo {
   std::string name{};
@@ -15,17 +16,19 @@ struct VariableInfo {
   Type type = Type::DOUBLE;
 };
 
-// TODO: change string types eg. enum
 struct FunctionInfo {
   std::string name;
   size_t line_declared{};
-  std::vector<std::pair<std::string, size_t>> arguments{};
+  // first `parameters` variables in `variables` are parameters
+  size_t parameters = 0;
+  // index of variables used in function
+  std::vector<size_t> variables{};
   Type rettype = Type::UNKNOWN;
 };
 
 class SymbolTable {
+
 private:
-  typedef std::unordered_map<std::string, size_t> scope_t;
   std::vector<scope_t> scope_stack{1};
 
   std::optional<size_t> FindVarMaybe(std::string const &name) const;
@@ -35,7 +38,7 @@ public:
   std::vector<FunctionInfo> functions{};
 
   void PushScope();
-  void PopScope();
+  scope_t PopScope();
   size_t FindVar(std::string const &name, size_t line_num) const;
   bool HasVar(std::string const &name) const;
   size_t AddVar(std::string const &name, Type type, size_t line_num);
