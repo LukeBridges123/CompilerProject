@@ -3,6 +3,7 @@
 
 #include "ASTNode.hpp"
 #include "Error.hpp"
+#include "util.hpp"
 
 std::vector<WATExpr> ASTNode::Emit(State &state) const {
   switch (type) {
@@ -27,6 +28,7 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
     return children.at(0).Emit(state);
   }
   case EMPTY:
+    return {};
   case MODULE: // module should be called manually on root node
   default:
     assert(false);
@@ -51,6 +53,7 @@ WATExpr ASTNode::EmitModule(State &state) const {
 std::vector<WATExpr> ASTNode::EmitLiteral(State &state) const {
   WATExpr literal{"i32.const", std::format("{}", value)};
   literal.comment = "Literal value";
+  literal.format.write_inline = true;
   return {literal};
 }
 
@@ -267,16 +270,33 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
 }
 
 std::vector<WATExpr> ASTNode::EmitWhile(State &state) const {
-  // assert(children.size() == 2);
-  // assert(value == double{});
-  // assert(literal == std::string{});
+  assert(children.size() == 2);
+  // make labels ahead of time for ease of use
+  std::string const loop_label = join(state.loop_idx, ".");
+  std::string const loop_id = Variable("loop_", loop_label);
+  std::string const loop_exit = Variable("loop_exit_", loop_label);
 
-  // ASTNode &condition = children[0];
-  // ASTNode &body = children[1];
-  // while (condition.EmitExpect(state.table)) const {
-  //   body.Emit(state);
-  // }
-  ErrorNoLine("Not implemented");
+  state.loop_idx.back()++;
+  state.loop_idx.push_back(0);
+
+  // create loop block
+  WATExpr block{"block", loop_exit};
+  WATExpr &loop = block.Child("loop", loop_id);
+
+  // construct conditional
+  std::vector<WATExpr> condition = children.at(0).Emit(state);
+  loop.Child("br_if", loop_exit)
+      .Comment("Check while loop condition")
+      .Child("i32.eqz")
+      .Comment("Invert condition, break if condition false")
+      .AddChildren(condition);
+
+  loop.AddChildren(children.at(1).Emit(state));
+  loop.Child("br", loop_id).Comment("Jump to start of while loop");
+
+  state.loop_idx.pop_back();
+
+  return {block};
 }
 
 std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {

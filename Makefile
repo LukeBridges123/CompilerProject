@@ -33,7 +33,7 @@ tests: $(PROJECT)
 .PHONY: tests serve
 
 # List header files here that should trigger full recompilation when they change.
-KEY_FILES := Error.hpp
+KEY_FILES := Error.hpp util.hpp
 # List source files here
 SOURCE := $(PROJECT).o ASTNode.o WAT.o Type.o State.o
 

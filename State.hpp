@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -43,5 +44,5 @@ public:
 
 struct State {
   SymbolTable const table;
-  std::vector<size_t> loop_label{};
+  std::vector<size_t> loop_idx = {0};
 };

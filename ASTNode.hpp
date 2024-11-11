@@ -8,10 +8,6 @@
 #include "WAT.hpp"
 
 class ASTNode {
-
-private:
-  std::vector<ASTNode> children{};
-
 public:
   enum Type {
     EMPTY = 0,
@@ -25,7 +21,7 @@ public:
     WHILE,
     STRING,
     FUNCTION,
-    RETURN // TODO: should return actually be a node?
+    RETURN
   };
   Type const type;
   double value{};
@@ -68,6 +64,10 @@ public:
   }
 
   WATExpr EmitModule(State &state) const;
+
+private:
+  std::vector<ASTNode> children{};
+
   std::vector<WATExpr> Emit(State &state) const;
   std::vector<WATExpr> EmitLiteral(State &state) const;
   std::vector<WATExpr> EmitScope(State &state) const;
