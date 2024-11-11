@@ -2,11 +2,10 @@
 
 #include <type_traits>
 
-#include "Type.hpp"
 #include "Error.hpp"
 
 template <typename T>
-Value::Value(T val, std::string idName, size_t line) {
+Value::Value(std::string idName, size_t line, T val) {
     value = val;
     assigned = true;
     name = idName;
@@ -33,8 +32,7 @@ Value::Value(std::string idName, Type type, size_t line) {
     }
 }
 
-std::variant<int, double, char> *Value::getValue()
-{   
+const std::variant<int, double, char>* Value::getValue() const {   
     if (!assigned) {
         // No value assigned
         return nullptr;

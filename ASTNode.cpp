@@ -3,6 +3,7 @@
 
 #include "ASTNode.hpp"
 #include "Error.hpp"
+#include "Value.hpp"
 
 std::vector<WATExpr> ASTNode::Emit(SymbolTable const &symbols) const {
   switch (type) {
@@ -288,9 +289,10 @@ std::vector<WATExpr> ASTNode::EmitFunction(SymbolTable const &symbols) const {
   FunctionInfo const &info = symbols.functions.at(var_id);
   WATExpr function{"func", "$" + info.name};
   for (auto const &[name, var_id] : info.arguments) {
-    VariableInfo const &var_info = symbols.variables.at(var_id);
+    Value const &var_info = symbols.variables.at(var_id);
     function.Child("param", "$var" + std::to_string(var_id),
-                   var_info.type.WATType());
+                   //var_info.type.WATType());
+                   var_info.getType().WATType());
   }
   // add result to function and its exit block
   WATExpr result{"result", info.rettype.WATType()};
