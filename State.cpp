@@ -2,7 +2,7 @@
 #include <stdexcept>
 
 #include "Error.hpp"
-#include "SymbolTable.hpp"
+#include "State.hpp"
 
 std::optional<size_t> SymbolTable::FindVarMaybe(std::string const &name) const {
   for (auto curr_scope = scope_stack.rbegin(); curr_scope != scope_stack.rend();

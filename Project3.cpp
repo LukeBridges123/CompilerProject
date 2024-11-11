@@ -8,7 +8,7 @@
 
 #include "ASTNode.hpp"
 #include "Error.hpp"
-#include "SymbolTable.hpp"
+#include "State.hpp"
 #include "Type.hpp"
 #include "WAT.hpp"
 #include "lexer.hpp"
@@ -352,7 +352,10 @@ public:
     }
   }
 
-  WATExpr GenerateCode() { return root.EmitModule(table); }
+  WATExpr GenerateCode() {
+    State state{std::move(table)};
+    return root.EmitModule(state);
+  }
 };
 
 int main(int argc, char *argv[]) {

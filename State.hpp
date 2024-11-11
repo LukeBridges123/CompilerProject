@@ -40,3 +40,8 @@ public:
   size_t AddVar(std::string const &name, Type type, size_t line_num);
   size_t AddFunction(std::string const &name, size_t line_num);
 };
+
+struct State {
+  SymbolTable const table;
+  std::vector<size_t> loop_label{};
+};
