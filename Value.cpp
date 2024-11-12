@@ -26,7 +26,7 @@ Value::Value(std::string idName, Type type, size_t line) {
         value = double();
         break;
     default:
-        // Add some error handling
+        Error(line, "Declareation of Unknown Type!");
         break;
     }
 }

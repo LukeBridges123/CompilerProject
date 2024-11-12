@@ -23,7 +23,7 @@ Type::Type(Value const &value){
   else if (std::holds_alternative<double>(val)){ id = Type::DOUBLE; }
   else if (std::holds_alternative<char>(val)){ id = Type::CHAR; }
   else {
-    Error(value.getDeclaredLine(), "Unknown type!");
+    Error(value.line_declared, "Unknown type!");
   }
 }
 
