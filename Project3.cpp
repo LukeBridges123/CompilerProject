@@ -92,14 +92,6 @@ private:
     // parse body
     ParseBlock(function);
 
-    // store which variables are associated with this function.
-    // sort them now, since we'll need them in order when writing out
-    // declarations later
-    std::ranges::copy(table.PopScope() |
-                          std::views::transform(&scope_t::value_type::second),
-                      std::back_inserter(func_info.variables));
-    std::ranges::sort(func_info.variables);
-
     return function;
   }
 

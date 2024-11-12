@@ -43,6 +43,9 @@ bool SymbolTable::HasVar(std::string const &name) const {
 
 size_t SymbolTable::AddVar(std::string const &name, Type type,
                            size_t line_num) {
+  // a function must be created before we can add variables
+  assert(functions.size() > 0);
+
   auto curr_scope = scope_stack.rbegin();
   if (curr_scope->find(name) != curr_scope->end()) {
     Error(line_num, "Redeclaration of variable ", name);
@@ -50,6 +53,7 @@ size_t SymbolTable::AddVar(std::string const &name, Type type,
   VariableInfo new_var_info = VariableInfo{name, line_num, type};
   size_t new_index = this->variables.size();
   variables.push_back(new_var_info);
+  functions.back().variables.push_back(new_index);
   curr_scope->insert({name, new_index});
   return new_index;
 }
