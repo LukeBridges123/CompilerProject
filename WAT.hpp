@@ -1,11 +1,22 @@
 #pragma once
-#include <concepts>
 #include <iostream>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <vector>
 
 constexpr int INDENT = 2;
+
+struct FormatOptions {
+  // add a newline after expression
+  bool newline = false;
+  // whether to write this expression inline with its parent
+  bool write_inline = false;
+  // put attrs on same line as atom, instead of on separate lines
+  bool inline_attrs = true;
+  // put comment on same line instead of preceding line
+  bool inline_comment = true;
+};
 
 // separate vectors for arguments + children possibly isn't the best
 // representation, but it makes formatting easier. might be an issue if we need
@@ -15,13 +26,15 @@ struct WATExpr {
   std::vector<std::string> attributes{};
   std::vector<WATExpr> children{};
   std::optional<std::string> comment = std::nullopt;
+  FormatOptions format{};
 
   // equivalent to aggregate constructor
   WATExpr(std::string atom, std::vector<std::string> attributes = {},
           std::vector<WATExpr> children = {},
-          std::optional<std::string> comment = std::nullopt)
+          std::optional<std::string> comment = std::nullopt,
+          FormatOptions format = {})
       : atom(atom), attributes(attributes), children(children),
-        comment(comment) {};
+        comment(comment), format(format) {};
 
   // expand attr strings into attributes vector
   template <typename... Args>
@@ -43,19 +56,33 @@ struct WATExpr {
     return children.back();
   };
 
-  void AddChildren(std::vector<WATExpr> new_children) {
-    std::move(new_children.begin(), new_children.end(),
-              std::back_inserter(children));
-  };
+  void AddChildren(std::vector<WATExpr> new_children);
+  WATExpr &Inline();
 };
 
 class WATWriter {
 private:
   int curindent = 0;
+  std::ostream &out;
+  // buffer for inline comments, since we can't write them out
+  // until after we've finished writing out close parens for a line,
+  // and we could end up with multiple inline comments
+  // intended for the same line
+  std::vector<std::string> comment_queue{};
+
   std::string Indent() const;
+  std::string Newline() const;
+  void NewlineWithComments();
 
 public:
-  void Write(std::ostream &out, WATExpr const &expr);
+  WATWriter(std::ostream &out) : out(out) {};
+  void Write(WATExpr const &expr);
 };
 
 std::string Quote(std::string in);
+template <typename... T> std::string Variable(T... components) {
+  std::stringstream out{};
+  out << "$";
+  (out << ... << components);
+  return out.str();
+}

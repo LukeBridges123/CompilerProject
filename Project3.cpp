@@ -231,7 +231,7 @@ private:
     return ASTNode(ASTNode::OPERATION, "!", std::move(rhs));
   }
 
-  ASTNode ParseSqrt(){
+  ASTNode ParseSqrt() {
     auto inside = ParseExpr();
     return ASTNode(ASTNode::OPERATION, "sqrt", std::move(inside));
   }
@@ -373,6 +373,6 @@ int main(int argc, char *argv[]) {
   tube.Parse();
   WATExpr wat = tube.GenerateCode();
 
-  WATWriter writer;
-  writer.Write(std::cout, wat);
+  WATWriter writer{std::cout};
+  writer.Write(wat);
 }

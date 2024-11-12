@@ -1,32 +1,67 @@
 #include "WAT.hpp"
 
-std::string WATWriter::Indent() const { return std::string(curindent, ' '); }
+void WATExpr::AddChildren(std::vector<WATExpr> new_children) {
+  std::move(new_children.begin(), new_children.end(),
+            std::back_inserter(children));
+};
 
-void WATWriter::Write(std::ostream &out, WATExpr const &expr) {
+WATExpr &WATExpr::Inline() {
+  format.write_inline = true;
+  return *this;
+};
+
+std::string WATWriter::Indent() const { return std::string(curindent, ' '); }
+std::string WATWriter::Newline() const { return "\n" + Indent(); }
+void WATWriter::NewlineWithComments() {
+  if (comment_queue.empty()) {
+    out << Newline();
+    return;
+  }
+  while (!comment_queue.empty()) {
+    out << " ;; " << comment_queue.back();
+    comment_queue.pop_back();
+    out << Newline();
+  }
+}
+
+void WATWriter::Write(WATExpr const &expr) {
   // write comment
-  if (expr.comment) {
-    out << Indent() << ";; " << expr.comment.value() << std::endl;
+  if (expr.comment && !expr.format.inline_comment) {
+    out << ";; " << expr.comment.value() << Newline();
   }
 
   /// write atom
-  out << Indent() << "(" << expr.atom;
+  out << "(" << expr.atom;
 
   curindent += INDENT;
 
+  std::string separator = expr.format.inline_attrs ? " " : Newline();
   for (auto i = expr.attributes.cbegin(); i != expr.attributes.cend(); i++) {
-    if (i != expr.attributes.cend())
-      out << " ";
+    if (i != expr.attributes.cend()) {
+      out << separator;
+    }
     out << *i;
   }
 
   /// write children
-  for (WATExpr const &child : expr.children) {
-    out << std::endl;
-    Write(out, child);
+  for (size_t i = 0; i < expr.children.size(); i++) {
+    WATExpr const &child = expr.children.at(i);
+    if (child.format.write_inline) {
+      out << " ";
+    } else {
+      NewlineWithComments();
+    }
+    Write(child);
   }
   curindent -= INDENT;
 
   out << ")";
+  if (expr.comment && expr.format.inline_comment) {
+    comment_queue.push_back(expr.comment.value());
+  }
+  if (expr.format.newline) {
+    NewlineWithComments();
+  }
 }
 
 std::string Quote(std::string in) { return '"' + in + '"'; }
