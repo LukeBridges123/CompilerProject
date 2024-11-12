@@ -102,10 +102,11 @@ private:
   }
 
   ASTNode ParseDecl() {
-    ExpectToken(Lexer::ID_VAR);
+    //ExpectToken(Lexer::ID_VAR);
+    Token const &varType = ExpectToken(Lexer::ID_TYPE);
     Token const &ident = ExpectToken(Lexer::ID_ID);
     if (IfToken(Lexer::ID_ENDLINE)) {
-      table.AddVar(ident.lexeme, Type::DOUBLE, ident.line_id);
+      table.AddVar(ident.lexeme, Type(varType), ident.line_id);
       return ASTNode{};
     }
     ExpectToken(Lexer::ID_ASSIGN);
@@ -115,7 +116,7 @@ private:
 
     // don't add until _after_ we possibly resolve idents in expression
     // ex. var foo = foo should error if foo is undefined
-    size_t var_id = table.AddVar(ident.lexeme, Type::DOUBLE, ident.line_id);
+    size_t var_id = table.AddVar(ident.lexeme, Type(varType), ident.line_id);
 
     ASTNode out = ASTNode{ASTNode::ASSIGN};
     out.AddChildren(ASTNode(ASTNode::IDENTIFIER, var_id, &ident),
@@ -315,7 +316,9 @@ private:
       return ParseFunction();
     case Lexer::ID_SCOPE_START:
       return ParseScope();
-    case Lexer::ID_VAR:
+    // case Lexer::ID_VAR:
+    //   return ParseDecl();
+    case Lexer::ID_TYPE:
       return ParseDecl();
     case Lexer::ID_ID:
     case Lexer::ID_FLOAT:
