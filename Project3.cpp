@@ -24,6 +24,7 @@ private:
   SymbolTable table{};
   size_t token_idx{0};
   ASTNode root{ASTNode::MODULE};
+  size_t loop_depth = 0;
 
   Token const &CurToken() const {
     if (token_idx >= tokens.size())
@@ -314,8 +315,22 @@ private:
       return node;
     }
 
+    loop_depth++;
     node.AddChild(ParseStatement());
+    loop_depth--;
+
     return node;
+  }
+
+  ASTNode ParseLoopControl() {
+    if (loop_depth == 0) {
+      Error(CurToken(), "Found ", CurToken().lexeme, " outside loop");
+    }
+    ASTNode::Type nodetype =
+        CurToken() == Lexer::ID_CONTINUE ? ASTNode::CONTINUE : ASTNode::BREAK;
+    ConsumeToken();
+    ExpectToken(Lexer::ID_ENDLINE);
+    return ASTNode{nodetype};
   }
 
   ASTNode ParseStatement() {
@@ -345,6 +360,9 @@ private:
       return ParseIF();
     case Lexer::ID_WHILE:
       return ParseWhile();
+    case Lexer::ID_BREAK:
+    case Lexer::ID_CONTINUE:
+      return ParseLoopControl();
     default:
       ErrorUnexpected(current);
     }

@@ -24,6 +24,10 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
     return EmitLiteral(state);
   case WHILE:
     return EmitWhile(state);
+  case BREAK:
+    return EmitBreak(state);
+  case CONTINUE:
+    return EmitContinue(state);
   case RETURN: {
     assert(children.size() == 1);
     return children.at(0).Emit(state);
@@ -239,6 +243,16 @@ std::vector<WATExpr> ASTNode::EmitWhile(State &state) const {
   state.loop_idx.pop_back();
 
   return block;
+}
+
+std::vector<WATExpr> ASTNode::EmitContinue(State &state) const {
+  std::string const loop_label = join(state.loop_idx, ".");
+  return WATExpr{"br", Variable("loop_", loop_label)};
+}
+
+std::vector<WATExpr> ASTNode::EmitBreak(State &state) const {
+  std::string const loop_label = join(state.loop_idx, ".");
+  return WATExpr{"br", Variable("loop_exit_", loop_label)};
 }
 
 std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {

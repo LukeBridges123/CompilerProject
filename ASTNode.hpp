@@ -21,7 +21,9 @@ public:
     WHILE,
     STRING,
     FUNCTION,
-    RETURN
+    RETURN,
+    CONTINUE,
+    BREAK
   };
   Type const type;
   double value{};
@@ -77,4 +79,6 @@ private:
   std::vector<WATExpr> EmitOperation(State &state) const;
   std::vector<WATExpr> EmitWhile(State &state) const;
   std::vector<WATExpr> EmitFunction(State &state) const;
+  std::vector<WATExpr> EmitContinue(State &state) const;
+  std::vector<WATExpr> EmitBreak(State &state) const;
 };
