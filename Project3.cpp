@@ -368,7 +368,7 @@ public:
 
   void Parse() {
     while (token_idx < tokens.size()) {
-      root.AddChild(ParseStatement());
+      root.AddChild(ParseFunction());
     }
   }
 
