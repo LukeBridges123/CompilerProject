@@ -1,9 +1,9 @@
 #include <format>
 #include <ranges>
-#include <stdexcept>
 
 #include "ASTNode.hpp"
 #include "Error.hpp"
+#include "Value.hpp"
 #include "util.hpp"
 
 std::vector<WATExpr> ASTNode::Emit(State &state) const {
@@ -272,8 +272,8 @@ std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {
 
   // write out parameters (first info.parameters values in info.variables)
   for (size_t var_id : info.variables | std::views::take(info.parameters)) {
-    VariableInfo const &var_info = state.table.variables.at(var_id);
-    function.Child("param", Variable("var", var_id), var_info.type.WATType())
+    Value const &value = state.table.variables.at(var_id);
+    function.Child("param", Variable("var", var_id), value.getType().WATType())
         .Inline();
   }
 
@@ -283,9 +283,9 @@ std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {
 
   // write out locals (remaining values in info.variables)
   for (size_t var_id : info.variables | std::views::drop(info.parameters)) {
-    VariableInfo const &var_info = state.table.variables.at(var_id);
-    function.Child("local", Variable("var", var_id), var_info.type.WATType())
-        .Comment("Declare " + var_info.type.TypeName() + " " + var_info.name);
+    Value const &value = state.table.variables.at(var_id);
+    function.Child("local", Variable("var", var_id), value.getType().WATType())
+        .Comment("Declare " + value.getType().TypeName() + " " + value.name);
   }
 
   WATExpr &block = function.Child("block", Variable("fun_exit"));

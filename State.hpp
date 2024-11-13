@@ -7,14 +7,9 @@
 #include <vector>
 
 #include "Type.hpp"
+#include "Value.hpp"
 
 using scope_t = std::unordered_map<std::string, size_t>;
-
-struct VariableInfo {
-  std::string name{};
-  size_t line_declared{};
-  Type type = Type::DOUBLE;
-};
 
 struct FunctionInfo {
   std::string name;
@@ -34,7 +29,7 @@ private:
   std::optional<size_t> FindVarMaybe(std::string const &name) const;
 
 public:
-  std::vector<VariableInfo> variables{};
+  std::vector<Value> variables{};
   std::vector<FunctionInfo> functions{};
 
   void PushScope();

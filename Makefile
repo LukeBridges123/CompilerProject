@@ -35,7 +35,7 @@ tests: $(PROJECT)
 # List header files here that should trigger full recompilation when they change.
 KEY_FILES := Error.hpp util.hpp
 # List source files here
-SOURCE := $(PROJECT).o ASTNode.o WAT.o Type.o State.o
+SOURCE := $(PROJECT).o ASTNode.o WAT.o State.o Type.o Value.o
 
 $(PROJECT):	$(SOURCE) $(KEY_FILES)
 	$(CXX) $(CFLAGS) -o $(PROJECT) $(SOURCE)
