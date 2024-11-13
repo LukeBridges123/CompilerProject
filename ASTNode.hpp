@@ -22,8 +22,10 @@ public:
     CONDITIONAL,
     OPERATION,
     LITERAL,
+    INT,
+    DOUBLE,
     WHILE,
-    STRING,
+    CHAR,
     FUNCTION,
     RETURN // TODO: should return actually be a node?
   };

@@ -198,6 +198,11 @@ private:
 
   ASTNode ParseMulDivMod() {
     auto lhs = std::make_unique<ASTNode>(ParseTerm());
+
+    if (lhs->type == ASTNode::CHAR){
+      return ASTNode{std::move(*lhs)};
+    }
+
     while (CurToken().lexeme == "*" || CurToken().lexeme == "/" ||
            CurToken().lexeme == "%") {
       std::string operation = ConsumeToken().lexeme;
@@ -222,12 +227,24 @@ private:
 
   ASTNode ParseNegate() {
     auto lhs = std::make_unique<ASTNode>(ASTNode::LITERAL, -1);
+    Token const currToken = CurToken();
     auto rhs = ParseTerm();
+
+    if (rhs.type == ASTNode::CHAR){
+      Error(currToken, "Invalid action: Cannot negate a char type!");
+    }
+
     return ASTNode(ASTNode::OPERATION, "*", std::move(*lhs), std::move(rhs));
   }
 
   ASTNode ParseNOT() {
+    Token const currToken = CurToken();
     auto rhs = ParseTerm();
+
+    if (rhs.type != ASTNode::INT){
+      Error(currToken, "Invalid action: Cannot perform a logical \"NOT\" on a type thats not an INT!");
+    }
+
     return ASTNode(ASTNode::OPERATION, "!", std::move(rhs));
   }
 
@@ -236,21 +253,39 @@ private:
     return ASTNode(ASTNode::OPERATION, "sqrt", std::move(inside));
   }
 
+  ASTNode checkTypeCast(ASTNode node) {
+    Token const currToken = CurToken();
+
+    if (currToken != Lexer::ID_TYPE_CAST)
+    {
+      return node;
+    }
+
+    if (currToken.lexeme == ":int") {
+      return ASTNode(ASTNode::INT, std::move(node));
+    } 
+    
+    return ASTNode(ASTNode::DOUBLE, std::move(node));
+  }
+
   ASTNode ParseTerm() {
     Token const &current = CurToken();
     switch (current) {
     case Lexer::ID_FLOAT:
+      return checkTypeCast(ASTNode(ASTNode::DOUBLE, std::stod(ConsumeToken().lexeme)));
     case Lexer::ID_INT:
-      return ASTNode(ASTNode::LITERAL, std::stod(ConsumeToken().lexeme));
+      return checkTypeCast(ASTNode(ASTNode::INT, std::stod(ConsumeToken().lexeme)));
+    case Lexer::ID_CHAR:
+      return checkTypeCast(ASTNode(ASTNode::CHAR, ConsumeToken().lexeme[1]));
     case Lexer::ID_ID:
-      return ASTNode(ASTNode::IDENTIFIER,
+      return checkTypeCast(ASTNode(ASTNode::IDENTIFIER,
                      table.FindVar(ConsumeToken().lexeme, current.line_id),
-                     &current);
+                     &current));
     case Lexer::ID_OPEN_PARENTHESIS: {
       ExpectToken(Lexer::ID_OPEN_PARENTHESIS);
       ASTNode subexpression = ParseExpr();
       ExpectToken(Lexer::ID_CLOSE_PARENTHESIS);
-      return subexpression;
+      return checkTypeCast(std::move(subexpression));
     }
     case Lexer::ID_MATH:
       if (current.lexeme == "-") {
