@@ -1,4 +1,5 @@
 #pragma once
+#include "Type.hpp"
 #include "lexer.hpp"
 
 using namespace emplex;
@@ -38,3 +39,7 @@ template <typename... Ts> [[noreturn]] void ErrorNoLine(Ts... message) {
   std::cerr << std::endl;
   exit(1);
 }
+
+void ErrorUnsupportedUnary(Token const &token, Type const &type);
+void ErrorUnsupportedBinary(Token const &token, Type const &lhs,
+                            Type const &rhs);

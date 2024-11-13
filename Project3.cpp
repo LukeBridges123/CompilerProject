@@ -213,23 +213,23 @@ private:
 
   ASTNode ParseNegate() {
     auto lhs = std::make_unique<ASTNode>(ASTNode::LITERAL, -1);
-    Token const currToken = CurToken();
+    Token const &curr_token = CurToken();
     auto rhs = ParseTerm();
 
     if (rhs.type == ASTNode::CHAR) {
-      Error(currToken, "Invalid action: Cannot negate a char type!");
+      ErrorUnsupportedUnary(curr_token, Type::CHAR);
     }
 
     return ASTNode(ASTNode::OPERATION, "*", std::move(*lhs), std::move(rhs));
   }
 
   ASTNode ParseNOT() {
-    Token const currToken = CurToken();
+    Token const curr_token = CurToken();
     auto rhs = ParseTerm();
 
     if (rhs.type != ASTNode::INT) {
-      Error(currToken, "Invalid action: Cannot perform a logical \"NOT\" on a "
-                       "type thats not an INT!");
+      ErrorNoLine("TODO replace error with error below");
+      // ErrorUnsupportedUnary(curr_token, rhs.value);
     }
 
     return ASTNode(ASTNode::OPERATION, "!", std::move(rhs));
@@ -241,13 +241,13 @@ private:
   }
 
   ASTNode CheckTypeCast(ASTNode node) {
-    Token const currToken = CurToken();
+    Token const curr_token = CurToken();
 
-    if (currToken != Lexer::ID_TYPE_CAST) {
+    if (curr_token != Lexer::ID_TYPE_CAST) {
       return node;
     }
 
-    if (currToken.lexeme == ":int") {
+    if (curr_token.lexeme == ":int") {
       return ASTNode(ASTNode::INT, std::move(node));
     }
 
