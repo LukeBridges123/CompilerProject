@@ -211,6 +211,16 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     expr.AddChildren(left);
     expr.AddChildren(right);
     return expr;
+  } else if (literal == "==") {
+    WATExpr expr{"i32.eq"};
+    expr.AddChildren(left);
+    expr.AddChildren(right);
+    return expr;
+  } else if (literal == "!=") {
+    WATExpr expr{"i32.ne"};
+    expr.AddChildren(left);
+    expr.AddChildren(right);
+    return expr;
   }
   ErrorNoLine("Not implemented");
 }
