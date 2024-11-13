@@ -240,7 +240,7 @@ private:
     return ASTNode(ASTNode::OPERATION, "sqrt", std::move(inside));
   }
 
-  ASTNode checkTypeCast(ASTNode node) {
+  ASTNode CheckTypeCast(ASTNode node) {
     Token const currToken = CurToken();
 
     if (currToken != Lexer::ID_TYPE_CAST) {
@@ -258,22 +258,22 @@ private:
     Token const &current = CurToken();
     switch (current) {
     case Lexer::ID_FLOAT:
-      return checkTypeCast(
+      return CheckTypeCast(
           ASTNode(ASTNode::DOUBLE, std::stod(ConsumeToken().lexeme)));
     case Lexer::ID_INT:
-      return checkTypeCast(
+      return CheckTypeCast(
           ASTNode(ASTNode::INT, std::stod(ConsumeToken().lexeme)));
     case Lexer::ID_CHAR:
-      return checkTypeCast(ASTNode(ASTNode::CHAR, ConsumeToken().lexeme[1]));
+      return CheckTypeCast(ASTNode(ASTNode::CHAR, ConsumeToken().lexeme[1]));
     case Lexer::ID_ID:
-      return checkTypeCast(ASTNode(
+      return CheckTypeCast(ASTNode(
           ASTNode::IDENTIFIER,
           table.FindVar(ConsumeToken().lexeme, current.line_id), &current));
     case Lexer::ID_OPEN_PARENTHESIS: {
       ExpectToken(Lexer::ID_OPEN_PARENTHESIS);
       ASTNode subexpression = ParseExpr();
       ExpectToken(Lexer::ID_CLOSE_PARENTHESIS);
-      return checkTypeCast(std::move(subexpression));
+      return CheckTypeCast(std::move(subexpression));
     }
     case Lexer::ID_MATH:
       if (current.lexeme == "-") {
@@ -293,7 +293,7 @@ private:
     return ASTNode{};
   }
 
-  ASTNode ParseIF() {
+  ASTNode ParseIf() {
     ExpectToken(Lexer::ID_IF);
     ExpectToken(Lexer::ID_OPEN_PARENTHESIS);
 
@@ -370,7 +370,7 @@ private:
       return node;
     }
     case Lexer::ID_IF:
-      return ParseIF();
+      return ParseIf();
     case Lexer::ID_WHILE:
       return ParseWhile();
     case Lexer::ID_BREAK:

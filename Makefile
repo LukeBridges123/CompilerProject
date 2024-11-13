@@ -47,7 +47,7 @@ serve: tests
 	cd tests && python -m http.server
 
 clean:
-	rm -f $(PROJECT) *.o tests/current/output-*.txt
+	rm -f $(PROJECT) *.o tests/current/output-*.txt tests/*.wat tests/*.wasm
 
 # Debugging information
 print-%: ; @echo '$(subst ','\'',$*=$($*))'

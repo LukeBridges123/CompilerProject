@@ -17,12 +17,15 @@ Type::Type(Token const &token) {
   }
 }
 
-Type::Type(Value const &value){
+Type::Type(Value const &value) {
   std::variant<int, double, char> val = *(value.getValue());
-  if (std::holds_alternative<int>(val)){ id = Type::INT; }
-  else if (std::holds_alternative<double>(val)){ id = Type::DOUBLE; }
-  else if (std::holds_alternative<char>(val)){ id = Type::CHAR; }
-  else {
+  if (std::holds_alternative<int>(val)) {
+    id = Type::INT;
+  } else if (std::holds_alternative<double>(val)) {
+    id = Type::DOUBLE;
+  } else if (std::holds_alternative<char>(val)) {
+    id = Type::CHAR;
+  } else {
     Error(value.line_declared, "Unknown type!");
   }
 }
