@@ -33,9 +33,9 @@ tests: $(PROJECT)
 .PHONY: tests serve
 
 # List header files here that should trigger full recompilation when they change.
-KEY_FILES := Error.hpp util.hpp
+KEY_FILES := util.hpp
 # List source files here
-SOURCE := $(PROJECT).o ASTNode.o WAT.o State.o Type.o Value.o
+SOURCE := $(PROJECT).o ASTNode.o Error.o State.o Type.o Value.o WAT.o
 
 $(PROJECT):	$(SOURCE) $(KEY_FILES)
 	$(CXX) $(CFLAGS) -o $(PROJECT) $(SOURCE)

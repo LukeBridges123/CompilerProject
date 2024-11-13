@@ -18,7 +18,10 @@ Type::Type(Token const &token) {
 }
 
 Type::Type(Value const &value) {
-  std::variant<int, double, char> val = *(value.getValue());
+  if (!value.GetValue().has_value()) {
+    ErrorNoLine("Attempt to access type of uninitialized variable");
+  }
+  std::variant<int, double, char> val = value.GetValue().value();
   if (std::holds_alternative<int>(val)) {
     id = Type::INT;
   } else if (std::holds_alternative<double>(val)) {

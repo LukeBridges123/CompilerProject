@@ -135,8 +135,6 @@ std::vector<WATExpr> ASTNode::EmitConditional(State &state) const {
   }
   condition.push_back(if_then_else);
   return condition;
-
-  // ErrorNoLine("Not implemented");
 }
 
 std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
@@ -163,7 +161,7 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     expr.AddChildren(left);
     return expr;
   } else if (literal == "sqrt") {
-    ErrorNoLine("Not implemeneted");
+    ErrorNoLine("Not implemeneted (sqrt)");
   }
 
   // remaining operations are binary operations
@@ -222,7 +220,7 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     expr.AddChildren(right);
     return expr;
   }
-  ErrorNoLine("Not implemented");
+  ErrorNoLine("Not implemented (emit operation fallthrough)");
 }
 
 std::vector<WATExpr> ASTNode::EmitWhile(State &state) const {
@@ -273,7 +271,7 @@ std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {
   // write out parameters (first info.parameters values in info.variables)
   for (size_t var_id : info.variables | std::views::take(info.parameters)) {
     Value const &value = state.table.variables.at(var_id);
-    function.Child("param", Variable("var", var_id), value.getType().WATType())
+    function.Child("param", Variable("var", var_id), value.GetType().WATType())
         .Inline();
   }
 
@@ -284,8 +282,8 @@ std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {
   // write out locals (remaining values in info.variables)
   for (size_t var_id : info.variables | std::views::drop(info.parameters)) {
     Value const &value = state.table.variables.at(var_id);
-    function.Child("local", Variable("var", var_id), value.getType().WATType())
-        .Comment("Declare " + value.getType().TypeName() + " " + value.name);
+    function.Child("local", Variable("var", var_id), value.GetType().WATType())
+        .Comment("Declare " + value.GetType().TypeName() + " " + value.name);
   }
 
   WATExpr &block = function.Child("block", Variable("fun_exit"));
