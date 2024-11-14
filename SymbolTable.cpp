@@ -45,9 +45,9 @@ size_t SymbolTable::AddVar(std::string const &name, VarType type,
   if (curr_scope->find(name) != curr_scope->end()) {
     Error(line_num, "Redeclaration of variable ", name);
   }
-  Value new_var_info = Value{name, type, line_num};
+  //Value new_var_info = Value{line_num, name};
   size_t new_index = this->variables.size();
-  variables.push_back(new_var_info);
+  //variables.push_back(new_var_info);
   curr_scope->insert({name, new_index});
   return new_index;
 }

@@ -203,6 +203,15 @@ private:
            CurToken().lexeme == "%") {
       std::string operation = ConsumeToken().lexeme;
       ASTNode rhs = ParseTerm();
+
+      if (lhs->getType()->id == VarType::CHAR || rhs.getType()->id == VarType::CHAR){
+        Error(CurToken(), "Invalid action: Cannot perform multiplication, division, or modulus wtih a char type!");
+      }
+
+      if (operation == "%" && (lhs->getType()->id == VarType::DOUBLE || rhs.getType()->id == VarType::DOUBLE)) {
+        Error(CurToken(), "Invalid action: Cannot perform modulus wtih a double type!");
+      }
+
       lhs = std::make_unique<ASTNode>(ASTNode(ASTNode::OPERATION, operation,
                                               std::move(*lhs), std::move(rhs)));
     }
@@ -273,8 +282,9 @@ private:
     switch (current) {
     case Lexer::ID_FLOAT:
     case Lexer::ID_INT:
+      return checkTypeCast(ASTNode(ASTNode::LITERAL, std::stod(ConsumeToken().lexeme)));
     case Lexer::ID_CHAR:
-      return checkTypeCast(ASTNode(ASTNode::LITERAL, &ConsumeToken()));
+      return checkTypeCast(ASTNode(ASTNode::LITERAL, ConsumeToken().lexeme[1]));
     case Lexer::ID_ID:
       return checkTypeCast(ASTNode(ASTNode::IDENTIFIER,
                      table.FindVar(ConsumeToken().lexeme, current.line_id),

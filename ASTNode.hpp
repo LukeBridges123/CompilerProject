@@ -45,8 +45,10 @@ public:
 
   ASTNode(Type type = EMPTY) : type(type) {};
   ASTNode(Type type, std::string literal) : type(type), literal(literal) {};
-  //ASTNode(Type type, double value) : type(type), value(value) {};
-  ASTNode(Type type, Token const *token);
+
+  template <typename T>
+  ASTNode(Type type, T val) : type(type), value(Value(val)) {};
+  // ASTNode(Type type, char val);
   ASTNode(Type type, size_t var_id, Token const *token)
       : type(type), var_id(var_id), token(token) {};
 

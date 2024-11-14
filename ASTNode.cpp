@@ -5,9 +5,22 @@
 #include "Error.hpp"
 #include "Value.hpp"
 
-ASTNode::ASTNode(Type type, Token const *token) : type(type), token(token) {
-  value = Value{token->line_id, token->lexeme};
-}
+
+// ASTNode::ASTNode(Type type, Token const *token, Token const *typeToken) : type(type), token(token)
+// {
+//     switch ((*typeToken))
+//     {
+//     case Lexer::ID_FLOAT:
+//     case Lexer::ID_INT:
+//         value = Value{token->line_id, std::stod(token->lexeme)};
+//         break;
+//     case Lexer::ID_CHAR:
+//         value = Value{token->line_id, token->lexeme[1]};
+//         break;
+//     default:
+//         break;
+//     }
+// }
 
 std::vector<WATExpr> ASTNode::Emit(SymbolTable const &symbols) const {
   switch (type) {
@@ -57,7 +70,10 @@ WATExpr ASTNode::EmitModule(SymbolTable const &symbols) const
 }
 
 std::vector<WATExpr> ASTNode::EmitLiteral(SymbolTable const &symbols) const {
-  WATExpr literal{"i32.const", std::format("{}", value->getValue())};
+  std::string valueStr = std::visit([](auto&& value) {
+    return std::format("{}", value);
+  }, value->getValue());
+  WATExpr literal{"i32.const", std::format("{}", valueStr)};
   literal.comment = "Literal value";
   return {literal};
 }

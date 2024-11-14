@@ -19,6 +19,9 @@ public:
     template <typename T>
     Value(size_t line, T val) : value(val), line_declared(line) {};
 
+    template <typename T>
+    Value(T val) : value(val) {};
+
     // Constructor for variable declaration without value
     //Value(Type type, size_t line);
 
