@@ -12,7 +12,7 @@
 struct VariableInfo {
   std::string name{};
   size_t line_declared{};
-  Type type = Type::DOUBLE;
+  VarType type = VarType::DOUBLE;
 };
 
 // TODO: change string types eg. enum
@@ -20,7 +20,7 @@ struct FunctionInfo {
   std::string name;
   size_t line_declared{};
   std::vector<std::pair<std::string, size_t>> arguments{};
-  Type rettype = Type::UNKNOWN;
+  VarType rettype = VarType::UNKNOWN;
 };
 
 class SymbolTable {
@@ -38,6 +38,6 @@ public:
   void PopScope();
   size_t FindVar(std::string const &name, size_t line_num) const;
   bool HasVar(std::string const &name) const;
-  size_t AddVar(std::string const &name, Type type, size_t line_num);
+  size_t AddVar(std::string const &name, VarType type, size_t line_num);
   size_t AddFunction(std::string const &name, size_t line_num);
 };

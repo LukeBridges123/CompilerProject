@@ -38,7 +38,8 @@ bool SymbolTable::HasVar(std::string const &name) const {
   return FindVarMaybe(name).has_value();
 }
 
-size_t SymbolTable::AddVar(std::string const &name, Type type,
+//Checks if the variable exists withing the current scope
+size_t SymbolTable::AddVar(std::string const &name, VarType type,
                            size_t line_num) {
   auto curr_scope = scope_stack.rbegin();
   if (curr_scope->find(name) != curr_scope->end()) {

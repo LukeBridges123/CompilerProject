@@ -5,6 +5,10 @@
 #include "Error.hpp"
 #include "Value.hpp"
 
+ASTNode::ASTNode(Type type, Token const *token) : type(type), token(token) {
+  value = Value{token->line_id, token->lexeme};
+}
+
 std::vector<WATExpr> ASTNode::Emit(SymbolTable const &symbols) const {
   switch (type) {
   case SCOPE:
@@ -35,22 +39,25 @@ std::vector<WATExpr> ASTNode::Emit(SymbolTable const &symbols) const {
   };
 }
 
-WATExpr ASTNode::EmitModule(SymbolTable const &symbols) const {
-  assert(type == ASTNode::MODULE);
-  WATExpr out{"module"};
-  for (ASTNode const &child : children) {
-    out.AddChildren(child.Emit(symbols));
-  }
-  for (FunctionInfo const &func : symbols.functions) {
-    out.Child("export", Quote(func.name))
-        .Child("func", Variable(func.name))
-        .Inline();
-  }
-  return out;
+WATExpr ASTNode::EmitModule(SymbolTable const &symbols) const
+{
+    assert(type == ASTNode::MODULE);
+    WATExpr out{"module"};
+    for (ASTNode const &child : children)
+    {
+        out.AddChildren(child.Emit(symbols));
+    }
+    for (FunctionInfo const &func : symbols.functions)
+    {
+        out.Child("export", Quote(func.name))
+            .Child("func", Variable(func.name))
+            .Inline();
+    }
+    return out;
 }
 
 std::vector<WATExpr> ASTNode::EmitLiteral(SymbolTable const &symbols) const {
-  WATExpr literal{"i32.const", std::format("{}", value)};
+  WATExpr literal{"i32.const", std::format("{}", value->getValue())};
   literal.comment = "Literal value";
   return {literal};
 }

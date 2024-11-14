@@ -3,9 +3,12 @@
 #include <cmath>
 #include <string>
 #include <vector>
+#include <optional>
 
 #include "SymbolTable.hpp"
 #include "WAT.hpp"
+#include "Value.hpp"
+#include "Type.hpp"
 
 class ASTNode {
 
@@ -22,15 +25,16 @@ public:
     CONDITIONAL,
     OPERATION,
     LITERAL,
-    INT,
-    DOUBLE,
+    CAST_INT,
+    CAST_DOUBLE,
     WHILE,
-    CHAR,
+    CAST_CHAR,
     FUNCTION,
     RETURN // TODO: should return actually be a node?
   };
   Type const type;
-  double value{};
+  //double value{};
+  std::optional<Value> value = std::nullopt;
   size_t var_id{};
   std::string literal{};
   Token const *token = nullptr; // for error reporting
@@ -41,7 +45,8 @@ public:
 
   ASTNode(Type type = EMPTY) : type(type) {};
   ASTNode(Type type, std::string literal) : type(type), literal(literal) {};
-  ASTNode(Type type, double value) : type(type), value(value) {};
+  //ASTNode(Type type, double value) : type(type), value(value) {};
+  ASTNode(Type type, Token const *token);
   ASTNode(Type type, size_t var_id, Token const *token)
       : type(type), var_id(var_id), token(token) {};
 
@@ -65,8 +70,19 @@ public:
     AddChildren(std::forward<Rest...>(rest...));
   }
 
-  template <typename T> void AddChildren(T node) {
+  template <typename T> 
+  void AddChildren(T node) {
     AddChild(std::forward<T>(node));
+  }
+
+  bool hasValue() { return value != std::nullopt; }
+
+  std::optional<VarType> getType() {
+    if (!hasValue()) {
+      return std::nullopt;
+    }
+
+    return value->getType();
   }
 
   WATExpr EmitModule(SymbolTable const &symbols) const;

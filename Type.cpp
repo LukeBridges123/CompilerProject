@@ -4,48 +4,47 @@
 
 #include <stdexcept>
 
-Type::Type(Token const &token) {
+VarType::VarType(Token const &token) {
   std::string const &lexeme = token.lexeme;
   if (lexeme == "int") {
-    id = Type::INT;
+    id = VarType::INT;
   } else if (lexeme == "char") {
-    id = Type::CHAR;
+    id = VarType::CHAR;
   } else if (lexeme == "double") {
-    id = Type::DOUBLE;
+    id = VarType::DOUBLE;
   } else {
     Error(token, "Unknown type ", lexeme);
   }
 }
 
-Type::Type(Value const &value){
-  std::variant<int, double, char> val = *(value.getValue());
-  if (std::holds_alternative<int>(val)){ id = Type::INT; }
-  else if (std::holds_alternative<double>(val)){ id = Type::DOUBLE; }
-  else if (std::holds_alternative<char>(val)){ id = Type::CHAR; }
+VarType::VarType(Value const &value){
+  if (std::holds_alternative<int>(value.getVariant())){ id = VarType::INT; }
+  else if (std::holds_alternative<double>(value.getVariant())){ id = VarType::DOUBLE; }
+  else if (std::holds_alternative<char>(value.getVariant())){ id = VarType::CHAR; }
   else {
     Error(value.line_declared, "Unknown type!");
   }
 }
 
-std::string Type::TypeName() const {
+std::string VarType::TypeName() const {
   switch (id) {
-  case Type::INT:
+  case VarType::INT:
     return "int";
-  case Type::CHAR:
+  case VarType::CHAR:
     return "char";
-  case Type::DOUBLE:
+  case VarType::DOUBLE:
     return "double";
   default:
     throw std::invalid_argument("Attempt to access unknown type");
   }
 };
 
-std::string Type::WATType() const {
+std::string VarType::WATType() const {
   switch (id) {
-  case Type::INT:
-  case Type::CHAR:
+  case VarType::INT:
+  case VarType::CHAR:
     return "i32";
-  case Type::DOUBLE:
+  case VarType::DOUBLE:
     return "f64";
   default:
     throw std::invalid_argument("Attempt to access unknown type");

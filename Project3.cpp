@@ -72,7 +72,7 @@ private:
 
     // parse arguments
     while (CurToken() != Lexer::ID_CLOSE_PARENTHESIS) {
-      Type var_type = ExpectToken(Lexer::ID_TYPE);
+      VarType var_type = ExpectToken(Lexer::ID_TYPE);
       Token var_name = ExpectToken(Lexer::ID_ID);
 
       size_t var_id =
@@ -106,7 +106,7 @@ private:
     Token const &varType = ExpectToken(Lexer::ID_TYPE);
     Token const &ident = ExpectToken(Lexer::ID_ID);
     if (IfToken(Lexer::ID_ENDLINE)) {
-      table.AddVar(ident.lexeme, Type(varType), ident.line_id);
+      table.AddVar(ident.lexeme, VarType(varType), ident.line_id);
       return ASTNode{};
     }
     ExpectToken(Lexer::ID_ASSIGN);
@@ -116,7 +116,7 @@ private:
 
     // don't add until _after_ we possibly resolve idents in expression
     // ex. var foo = foo should error if foo is undefined
-    size_t var_id = table.AddVar(ident.lexeme, Type(varType), ident.line_id);
+    size_t var_id = table.AddVar(ident.lexeme, VarType(varType), ident.line_id);
 
     ASTNode out = ASTNode{ASTNode::ASSIGN};
     out.AddChildren(ASTNode(ASTNode::IDENTIFIER, var_id, &ident),
@@ -199,10 +199,6 @@ private:
   ASTNode ParseMulDivMod() {
     auto lhs = std::make_unique<ASTNode>(ParseTerm());
 
-    if (lhs->type == ASTNode::CHAR){
-      return ASTNode{std::move(*lhs)};
-    }
-
     while (CurToken().lexeme == "*" || CurToken().lexeme == "/" ||
            CurToken().lexeme == "%") {
       std::string operation = ConsumeToken().lexeme;
@@ -230,7 +226,7 @@ private:
     Token const currToken = CurToken();
     auto rhs = ParseTerm();
 
-    if (rhs.type == ASTNode::CHAR){
+    if (rhs.getType()->id == VarType::CHAR){
       Error(currToken, "Invalid action: Cannot negate a char type!");
     }
 
@@ -241,7 +237,7 @@ private:
     Token const currToken = CurToken();
     auto rhs = ParseTerm();
 
-    if (rhs.type != ASTNode::INT){
+    if (rhs.getType()->id != VarType::INT){
       Error(currToken, "Invalid action: Cannot perform a logical \"NOT\" on a type thats not an INT!");
     }
 
@@ -262,21 +258,23 @@ private:
     }
 
     if (currToken.lexeme == ":int") {
-      return ASTNode(ASTNode::INT, std::move(node));
-    } 
-    
-    return ASTNode(ASTNode::DOUBLE, std::move(node));
+      ASTNode out{ASTNode::CAST_INT};
+      out.AddChildren(std::move(node));
+      return out;
+    }
+
+    ASTNode out{ASTNode::CAST_DOUBLE};
+    out.AddChildren(std::move(node));
+    return out;
   }
 
   ASTNode ParseTerm() {
     Token const &current = CurToken();
     switch (current) {
     case Lexer::ID_FLOAT:
-      return checkTypeCast(ASTNode(ASTNode::DOUBLE, std::stod(ConsumeToken().lexeme)));
     case Lexer::ID_INT:
-      return checkTypeCast(ASTNode(ASTNode::INT, std::stod(ConsumeToken().lexeme)));
     case Lexer::ID_CHAR:
-      return checkTypeCast(ASTNode(ASTNode::CHAR, ConsumeToken().lexeme[1]));
+      return checkTypeCast(ASTNode(ASTNode::LITERAL, &ConsumeToken()));
     case Lexer::ID_ID:
       return checkTypeCast(ASTNode(ASTNode::IDENTIFIER,
                      table.FindVar(ConsumeToken().lexeme, current.line_id),
