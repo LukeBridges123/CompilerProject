@@ -29,17 +29,16 @@ const ValueType Value::getValue() const {
     else { return std::get<char>(value); }
 }
 
-template <typename T>
-void Value::updateValue(T val) {
-    bool isSameType = std::visit([&](const auto &val) {
-            // Check if the types are the same
-            return std::is_same_v<decltype(val), T>; }, value);
-    
-    if (!isSameType) {
-        // Todo: Give better error
-        throw std::invalid_argument("Invalid assignment to a different Type!");
-    }
+template <typename T> void Value::UpdateValue(T val) {
+  // Check if the types are the same
+  bool is_same_type = std::visit(std::is_same_v<decltype(val), T>, value);
 
-    value = val;
-    assigned = true;
+  if (!is_same_type) {
+    // Todo: Give better error
+    throw std::invalid_argument("Invalid assignment to a different Type!");
+  }
+
+  value = val;
+  assigned = true;
 }
+

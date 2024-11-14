@@ -33,9 +33,9 @@ tests: $(PROJECT)
 .PHONY: tests serve
 
 # List header files here that should trigger full recompilation when they change.
-KEY_FILES := Error.hpp
+KEY_FILES := util.hpp
 # List source files here
-SOURCE := $(PROJECT).o ASTNode.o WAT.o Value.o Type.o SymbolTable.o
+SOURCE := $(PROJECT).o ASTNode.o Error.o State.o Type.o Value.o WAT.o
 
 $(PROJECT):	$(SOURCE) $(KEY_FILES)
 	$(CXX) $(CFLAGS) -o $(PROJECT) $(SOURCE)
@@ -47,7 +47,7 @@ serve: tests
 	cd tests && python -m http.server
 
 clean:
-	rm -f $(PROJECT) *.o tests/current/output-*.txt
+	rm -f $(PROJECT) *.o tests/current/output-*.txt tests/*.wat tests/*.wasm
 
 # Debugging information
 print-%: ; @echo '$(subst ','\'',$*=$($*))'

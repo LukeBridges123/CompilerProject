@@ -1,27 +1,28 @@
 #include "WAT.hpp"
+#include "util.hpp"
 
 void WATExpr::AddChildren(std::vector<WATExpr> new_children) {
   std::move(new_children.begin(), new_children.end(),
             std::back_inserter(children));
-};
+}
 
 WATExpr &WATExpr::Inline() {
   format.write_inline = true;
   return *this;
-};
+}
+
+WATExpr &WATExpr::Comment(std::string comment, bool inline_comment) {
+  this->comment = comment;
+  format.inline_comment = inline_comment;
+  return *this;
+}
 
 std::string WATWriter::Indent() const { return std::string(curindent, ' '); }
 std::string WATWriter::Newline() const { return "\n" + Indent(); }
 void WATWriter::NewlineWithComments() {
-  if (comment_queue.empty()) {
-    out << Newline();
-    return;
-  }
-  while (!comment_queue.empty()) {
-    out << " ;; " << comment_queue.back();
-    comment_queue.pop_back();
-    out << Newline();
-  }
+  out << join(comment_queue, Newline());
+  out << Newline();
+  comment_queue.clear();
 }
 
 void WATWriter::Write(WATExpr const &expr) {
@@ -35,13 +36,9 @@ void WATWriter::Write(WATExpr const &expr) {
 
   curindent += INDENT;
 
+  // write attributes
   std::string separator = expr.format.inline_attrs ? " " : Newline();
-  for (auto i = expr.attributes.cbegin(); i != expr.attributes.cend(); i++) {
-    if (i != expr.attributes.cend()) {
-      out << separator;
-    }
-    out << *i;
-  }
+  out << join(expr.attributes, separator, true);
 
   /// write children
   for (size_t i = 0; i < expr.children.size(); i++) {
@@ -57,11 +54,9 @@ void WATWriter::Write(WATExpr const &expr) {
 
   out << ")";
   if (expr.comment && expr.format.inline_comment) {
-    comment_queue.push_back(expr.comment.value());
+    comment_queue.push_back(" ;; " + expr.comment.value());
   }
   if (expr.format.newline) {
     NewlineWithComments();
   }
 }
-
-std::string Quote(std::string in) { return '"' + in + '"'; }

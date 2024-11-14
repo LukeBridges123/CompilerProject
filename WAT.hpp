@@ -56,8 +56,11 @@ struct WATExpr {
     return children.back();
   };
 
+  operator std::vector<WATExpr>() const { return {*this}; }
+
   void AddChildren(std::vector<WATExpr> new_children);
   WATExpr &Inline();
+  WATExpr &Comment(std::string comment, bool inline_comment = true);
 };
 
 class WATWriter {
@@ -78,11 +81,3 @@ public:
   WATWriter(std::ostream &out) : out(out) {};
   void Write(WATExpr const &expr);
 };
-
-std::string Quote(std::string in);
-template <typename... T> std::string Variable(T... components) {
-  std::stringstream out{};
-  out << "$";
-  (out << ... << components);
-  return out.str();
-}

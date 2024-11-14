@@ -1,16 +1,16 @@
 #pragma once
-#include "lexer.hpp"
 #include "Type.hpp"
 
-#include <variant>
 #include <optional>
 #include <string>
+#include <variant>
 
 using ValueType = std::variant<int, double, char>;
 
 class Value {
 private:
-    ValueType value;
+  ValueType value;
+
 public:
     size_t line_declared{};
     bool assigned = false;
@@ -34,7 +34,7 @@ public:
     // Returns the type of the variable
     VarType getType() const { return VarType(*this); }
 
-    // Checks if the type of the value given is the same as the variant declared and updates the value
-    template <typename T>
-    void updateValue(T val);
+  // Checks if the type of the value given is the same as the variant declared
+  // and updates the value
+  template <typename T> void UpdateValue(T val);
 };

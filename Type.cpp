@@ -17,7 +17,7 @@ VarType::VarType(Token const &token) {
   }
 }
 
-VarType::VarType(Value const &value){
+VarType::VarType(Value const &value) {
   if (std::holds_alternative<int>(value.getVariant())){ id = VarType::INT; }
   else if (std::holds_alternative<double>(value.getVariant())){ id = VarType::DOUBLE; }
   else if (std::holds_alternative<char>(value.getVariant())){ id = VarType::CHAR; }

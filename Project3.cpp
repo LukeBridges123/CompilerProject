@@ -1,5 +1,4 @@
 #include <cassert>
-#include <format>
 #include <fstream>
 #include <memory>
 #include <string>
@@ -8,7 +7,7 @@
 
 #include "ASTNode.hpp"
 #include "Error.hpp"
-#include "SymbolTable.hpp"
+#include "State.hpp"
 #include "Type.hpp"
 #include "WAT.hpp"
 #include "lexer.hpp"
@@ -22,6 +21,7 @@ private:
   SymbolTable table{};
   size_t token_idx{0};
   ASTNode root{ASTNode::MODULE};
+  size_t loop_depth = 0;
 
   Token const &CurToken() const {
     if (token_idx >= tokens.size())
@@ -75,9 +75,9 @@ private:
       VarType var_type = ExpectToken(Lexer::ID_TYPE);
       Token var_name = ExpectToken(Lexer::ID_ID);
 
-      size_t var_id =
-          table.AddVar(var_name.lexeme, var_type, var_name.line_id);
-      func_info.arguments.emplace_back(var_name.lexeme, var_id);
+      table.AddVar(var_name.lexeme, var_type, var_name.line_id);
+      func_info.parameters++;
+
       IfToken(','); // consume comma if exists
     }
     ConsumeToken(); // close parenthesis
@@ -89,7 +89,6 @@ private:
     // parse body
     ParseBlock(function);
 
-    table.PopScope();
     return function;
   }
 
@@ -102,7 +101,6 @@ private:
   }
 
   ASTNode ParseDecl() {
-    //ExpectToken(Lexer::ID_VAR);
     Token const &varType = ExpectToken(Lexer::ID_TYPE);
     Token const &ident = ExpectToken(Lexer::ID_ID);
     if (IfToken(Lexer::ID_ENDLINE)) {
@@ -218,36 +216,24 @@ private:
     return ASTNode{std::move(*lhs)};
   }
 
-/*
-  ASTNode ParseExponentiation() {
-    ASTNode lhs = ParseTerm();
-    if (CurToken().lexeme == "**") {
-      ConsumeToken();
-      ASTNode rhs = ParseExponentiation();
-      return ASTNode(ASTNode::OPERATION, "**", std::move(lhs), std::move(rhs));
-    }
-    return lhs;
-  }
-*/
-
   ASTNode ParseNegate() {
     auto lhs = std::make_unique<ASTNode>(ASTNode::LITERAL, -1);
-    Token const currToken = CurToken();
+    Token const &curr_token = CurToken();
     auto rhs = ParseTerm();
 
     if (rhs.getType()->id == VarType::CHAR){
-      Error(currToken, "Invalid action: Cannot negate a char type!");
+      Error(curr_token, "Invalid action: Cannot negate a char type!");
     }
 
     return ASTNode(ASTNode::OPERATION, "*", std::move(*lhs), std::move(rhs));
   }
 
   ASTNode ParseNOT() {
-    Token const currToken = CurToken();
+    Token const curr_token = CurToken();
     auto rhs = ParseTerm();
 
     if (rhs.getType()->id != VarType::INT){
-      Error(currToken, "Invalid action: Cannot perform a logical \"NOT\" on a type thats not an INT!");
+      Error(curr_token, "Invalid action: Cannot perform a logical \"NOT\" on a type thats not an INT!");
     }
 
     return ASTNode(ASTNode::OPERATION, "!", std::move(rhs));
@@ -258,15 +244,14 @@ private:
     return ASTNode(ASTNode::OPERATION, "sqrt", std::move(inside));
   }
 
-  ASTNode checkTypeCast(ASTNode node) {
-    Token const currToken = CurToken();
+  ASTNode CheckTypeCast(ASTNode node) {
+    Token const curr_token = CurToken();
 
-    if (currToken != Lexer::ID_TYPE_CAST)
-    {
+    if (curr_token != Lexer::ID_TYPE_CAST) {
       return node;
     }
 
-    if (currToken.lexeme == ":int") {
+    if (curr_token.lexeme == ":int") {
       ASTNode out{ASTNode::CAST_INT};
       out.AddChildren(std::move(node));
       return out;
@@ -282,18 +267,18 @@ private:
     switch (current) {
     case Lexer::ID_FLOAT:
     case Lexer::ID_INT:
-      return checkTypeCast(ASTNode(ASTNode::LITERAL, std::stod(ConsumeToken().lexeme)));
+      return CheckTypeCast(ASTNode(ASTNode::LITERAL, std::stod(ConsumeToken().lexeme)));
     case Lexer::ID_CHAR:
-      return checkTypeCast(ASTNode(ASTNode::LITERAL, ConsumeToken().lexeme[1]));
+      return CheckTypeCast(ASTNode(ASTNode::LITERAL, ConsumeToken().lexeme[1]));
     case Lexer::ID_ID:
-      return checkTypeCast(ASTNode(ASTNode::IDENTIFIER,
-                     table.FindVar(ConsumeToken().lexeme, current.line_id),
-                     &current));
+      return CheckTypeCast(ASTNode(
+          ASTNode::IDENTIFIER,
+          table.FindVar(ConsumeToken().lexeme, current.line_id), &current));
     case Lexer::ID_OPEN_PARENTHESIS: {
       ExpectToken(Lexer::ID_OPEN_PARENTHESIS);
       ASTNode subexpression = ParseExpr();
       ExpectToken(Lexer::ID_CLOSE_PARENTHESIS);
-      return checkTypeCast(std::move(subexpression));
+      return CheckTypeCast(std::move(subexpression));
     }
     case Lexer::ID_MATH:
       if (current.lexeme == "-") {
@@ -313,7 +298,7 @@ private:
     return ASTNode{};
   }
 
-  ASTNode ParseIF() {
+  ASTNode ParseIf() {
     ExpectToken(Lexer::ID_IF);
     ExpectToken(Lexer::ID_OPEN_PARENTHESIS);
 
@@ -348,8 +333,22 @@ private:
       return node;
     }
 
+    loop_depth++;
     node.AddChild(ParseStatement());
+    loop_depth--;
+
     return node;
+  }
+
+  ASTNode ParseLoopControl() {
+    if (loop_depth == 0) {
+      Error(CurToken(), "Found ", CurToken().lexeme, " outside loop");
+    }
+    ASTNode::Type nodetype =
+        CurToken() == Lexer::ID_CONTINUE ? ASTNode::CONTINUE : ASTNode::BREAK;
+    ConsumeToken();
+    ExpectToken(Lexer::ID_ENDLINE);
+    return ASTNode{nodetype};
   }
 
   ASTNode ParseStatement() {
@@ -359,8 +358,6 @@ private:
       return ParseFunction();
     case Lexer::ID_SCOPE_START:
       return ParseScope();
-    // case Lexer::ID_VAR:
-    //   return ParseDecl();
     case Lexer::ID_TYPE:
       return ParseDecl();
     case Lexer::ID_ID:
@@ -378,9 +375,12 @@ private:
       return node;
     }
     case Lexer::ID_IF:
-      return ParseIF();
+      return ParseIf();
     case Lexer::ID_WHILE:
       return ParseWhile();
+    case Lexer::ID_BREAK:
+    case Lexer::ID_CONTINUE:
+      return ParseLoopControl();
     default:
       ErrorUnexpected(current);
     }
@@ -394,11 +394,14 @@ public:
 
   void Parse() {
     while (token_idx < tokens.size()) {
-      root.AddChild(ParseStatement());
+      root.AddChild(ParseFunction());
     }
   }
 
-  WATExpr GenerateCode() { return root.EmitModule(table); }
+  WATExpr GenerateCode() {
+    State state{std::move(table)};
+    return root.EmitModule(state);
+  }
 };
 
 int main(int argc, char *argv[]) {

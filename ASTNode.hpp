@@ -5,16 +5,12 @@
 #include <vector>
 #include <optional>
 
-#include "SymbolTable.hpp"
+#include "State.hpp"
 #include "WAT.hpp"
 #include "Value.hpp"
 #include "Type.hpp"
 
 class ASTNode {
-
-private:
-  std::vector<ASTNode> children{};
-
 public:
   enum Type {
     EMPTY = 0,
@@ -30,7 +26,9 @@ public:
     WHILE,
     CAST_CHAR,
     FUNCTION,
-    RETURN // TODO: should return actually be a node?
+    RETURN,
+    CONTINUE,
+    BREAK
   };
   Type const type;
   //double value{};
@@ -87,14 +85,20 @@ public:
     return value->getType();
   }
 
-  WATExpr EmitModule(SymbolTable const &symbols) const;
-  std::vector<WATExpr> Emit(SymbolTable const &symbols) const;
-  std::vector<WATExpr> EmitLiteral(SymbolTable const &symbols) const;
-  std::vector<WATExpr> EmitScope(SymbolTable const &symbols) const;
-  std::vector<WATExpr> EmitAssign(SymbolTable const &symbols) const;
-  std::vector<WATExpr> EmitIdentifier(SymbolTable const &symbols) const;
-  std::vector<WATExpr> EmitConditional(SymbolTable const &symbols) const;
-  std::vector<WATExpr> EmitOperation(SymbolTable const &symbols) const;
-  std::vector<WATExpr> EmitWhile(SymbolTable const &symbols) const;
-  std::vector<WATExpr> EmitFunction(SymbolTable const &symbols) const;
+  WATExpr EmitModule(State &state) const;
+
+private:
+  std::vector<ASTNode> children{};
+
+  std::vector<WATExpr> Emit(State &state) const;
+  std::vector<WATExpr> EmitLiteral(State &state) const;
+  std::vector<WATExpr> EmitScope(State &state) const;
+  std::vector<WATExpr> EmitAssign(State &state) const;
+  std::vector<WATExpr> EmitIdentifier(State &state) const;
+  std::vector<WATExpr> EmitConditional(State &state) const;
+  std::vector<WATExpr> EmitOperation(State &state) const;
+  std::vector<WATExpr> EmitWhile(State &state) const;
+  std::vector<WATExpr> EmitFunction(State &state) const;
+  std::vector<WATExpr> EmitContinue(State &state) const;
+  std::vector<WATExpr> EmitBreak(State &state) const;
 };

@@ -2,7 +2,7 @@
 #include <stdexcept>
 
 #include "Error.hpp"
-#include "SymbolTable.hpp"
+#include "State.hpp"
 
 std::optional<size_t> SymbolTable::FindVarMaybe(std::string const &name) const {
   for (auto curr_scope = scope_stack.rbegin(); curr_scope != scope_stack.rend();
@@ -17,13 +17,16 @@ std::optional<size_t> SymbolTable::FindVarMaybe(std::string const &name) const {
 
 void SymbolTable::PushScope() { this->scope_stack.emplace_back(); }
 
-void SymbolTable::PopScope() {
+scope_t SymbolTable::PopScope() {
   if (scope_stack.size() == 0) {
     throw std::runtime_error("tried to pop nonexistent scope");
   } else if (scope_stack.size() == 1) {
     throw std::runtime_error("tried to pop outermost scope");
   }
+
+  scope_t back = scope_stack.back();
   scope_stack.pop_back();
+  return back;
 }
 
 size_t SymbolTable::FindVar(std::string const &name, size_t line_num) const {
@@ -38,16 +41,20 @@ bool SymbolTable::HasVar(std::string const &name) const {
   return FindVarMaybe(name).has_value();
 }
 
-//Checks if the variable exists withing the current scope
 size_t SymbolTable::AddVar(std::string const &name, VarType type,
                            size_t line_num) {
+  // a function must be created before we can add variables
+  assert(functions.size() > 0);
+
   auto curr_scope = scope_stack.rbegin();
   if (curr_scope->find(name) != curr_scope->end()) {
     Error(line_num, "Redeclaration of variable ", name);
   }
-  //Value new_var_info = Value{line_num, name};
+  // Some way to know if the variable as been assigned
+  VariableInfo new_var_info = VariableInfo{name, line_num};
   size_t new_index = this->variables.size();
-  //variables.push_back(new_var_info);
+  variables.push_back(new_var_info);
+  functions.back().variables.push_back(new_index);
   curr_scope->insert({name, new_index});
   return new_index;
 }

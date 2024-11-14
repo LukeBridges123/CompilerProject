@@ -9,35 +9,44 @@
 #include "Type.hpp"
 #include "Value.hpp"
 
+using scope_t = std::unordered_map<std::string, size_t>;
+
 struct VariableInfo {
   std::string name{};
   size_t line_declared{};
-  VarType type = VarType::DOUBLE;
+  bool is_assigned{};
 };
 
-// TODO: change string types eg. enum
 struct FunctionInfo {
   std::string name;
   size_t line_declared{};
-  std::vector<std::pair<std::string, size_t>> arguments{};
+  // first `parameters` variables in `variables` are parameters
+  size_t parameters = 0;
+  // index of variables used in function
+  std::vector<size_t> variables{};
   VarType rettype = VarType::UNKNOWN;
 };
 
 class SymbolTable {
+
 private:
-  typedef std::unordered_map<std::string, size_t> scope_t;
   std::vector<scope_t> scope_stack{1};
 
   std::optional<size_t> FindVarMaybe(std::string const &name) const;
 
 public:
-  std::vector<Value> variables{};
+  std::vector<VariableInfo> variables{};
   std::vector<FunctionInfo> functions{};
 
   void PushScope();
-  void PopScope();
+  scope_t PopScope();
   size_t FindVar(std::string const &name, size_t line_num) const;
   bool HasVar(std::string const &name) const;
   size_t AddVar(std::string const &name, VarType type, size_t line_num);
   size_t AddFunction(std::string const &name, size_t line_num);
+};
+
+struct State {
+  SymbolTable const table;
+  std::vector<size_t> loop_idx = {0};
 };
