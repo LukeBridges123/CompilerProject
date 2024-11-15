@@ -202,12 +202,16 @@ private:
       std::string operation = ConsumeToken().lexeme;
       ASTNode rhs = ParseTerm();
 
-      if (lhs->getType()->id == VarType::CHAR || rhs.getType()->id == VarType::CHAR){
-        Error(CurToken(), "Invalid action: Cannot perform multiplication, division, or modulus wtih a char type!");
+      if (lhs->getType()->id == VarType::CHAR ||
+          rhs.getType()->id == VarType::CHAR) {
+        Error(CurToken(), "Invalid action: Cannot perform multiplication, "
+                          "division, or modulus wtih a char type!");
       }
 
-      if (operation == "%" && (lhs->getType()->id == VarType::DOUBLE || rhs.getType()->id == VarType::DOUBLE)) {
-        Error(CurToken(), "Invalid action: Cannot perform modulus wtih a double type!");
+      if (operation == "%" && (lhs->getType()->id == VarType::DOUBLE ||
+                               rhs.getType()->id == VarType::DOUBLE)) {
+        Error(CurToken(),
+              "Invalid action: Cannot perform modulus with a double type!");
       }
 
       lhs = std::make_unique<ASTNode>(ASTNode(ASTNode::OPERATION, operation,
@@ -221,7 +225,7 @@ private:
     Token const &curr_token = CurToken();
     auto rhs = ParseTerm();
 
-    if (rhs.getType()->id == VarType::CHAR){
+    if (rhs.getType()->id == VarType::CHAR) {
       Error(curr_token, "Invalid action: Cannot negate a char type!");
     }
 
@@ -232,8 +236,9 @@ private:
     Token const curr_token = CurToken();
     auto rhs = ParseTerm();
 
-    if (rhs.getType()->id != VarType::INT){
-      Error(curr_token, "Invalid action: Cannot perform a logical \"NOT\" on a type thats not an INT!");
+    if (rhs.getType()->id != VarType::INT) {
+      Error(curr_token, "Invalid action: Cannot perform a logical \"NOT\" on a "
+                        "type thats not an INT!");
     }
 
     return ASTNode(ASTNode::OPERATION, "!", std::move(rhs));
@@ -267,7 +272,8 @@ private:
     switch (current) {
     case Lexer::ID_FLOAT:
     case Lexer::ID_INT:
-      return CheckTypeCast(ASTNode(ASTNode::LITERAL, std::stod(ConsumeToken().lexeme)));
+      return CheckTypeCast(
+          ASTNode(ASTNode::LITERAL, std::stod(ConsumeToken().lexeme)));
     case Lexer::ID_CHAR:
       return CheckTypeCast(ASTNode(ASTNode::LITERAL, ConsumeToken().lexeme[1]));
     case Lexer::ID_ID:

@@ -3,7 +3,6 @@
 
 #include <type_traits>
 
-
 // Value::Value(Type type, size_t line) {
 //     line_declared = line;
 
@@ -24,9 +23,13 @@
 // }
 
 const ValueType Value::getValue() const {
-    if (std::holds_alternative<int>(value)){ return std::get<int>(value); }
-    else if (std::holds_alternative<double>(value)){ return std::get<double>(value); }
-    else { return std::get<char>(value); }
+  if (std::holds_alternative<int>(value)) {
+    return std::get<int>(value);
+  } else if (std::holds_alternative<double>(value)) {
+    return std::get<double>(value);
+  } else {
+    return std::get<char>(value);
+  }
 }
 
 template <typename T> void Value::UpdateValue(T val) {
@@ -41,4 +44,3 @@ template <typename T> void Value::UpdateValue(T val) {
   value = val;
   assigned = true;
 }
-

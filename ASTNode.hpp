@@ -1,14 +1,14 @@
 #pragma once
 
 #include <cmath>
+#include <optional>
 #include <string>
 #include <vector>
-#include <optional>
 
 #include "State.hpp"
-#include "WAT.hpp"
-#include "Value.hpp"
 #include "Type.hpp"
+#include "Value.hpp"
+#include "WAT.hpp"
 
 class ASTNode {
 public:
@@ -31,7 +31,7 @@ public:
     BREAK
   };
   Type const type;
-  //double value{};
+  // double value{};
   std::optional<Value> value = std::nullopt;
   size_t var_id{};
   std::string literal{};
@@ -45,7 +45,7 @@ public:
   ASTNode(Type type, std::string literal) : type(type), literal(literal) {};
 
   template <typename T>
-  ASTNode(Type type, T val) : type(type), value(Value(val)) {};
+  ASTNode(Type type, T val) : type(type), value(Value(val)){};
   // ASTNode(Type type, char val);
   ASTNode(Type type, size_t var_id, Token const *token)
       : type(type), var_id(var_id), token(token) {};
@@ -70,8 +70,7 @@ public:
     AddChildren(std::forward<Rest...>(rest...));
   }
 
-  template <typename T> 
-  void AddChildren(T node) {
+  template <typename T> void AddChildren(T node) {
     AddChild(std::forward<T>(node));
   }
 

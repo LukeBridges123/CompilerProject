@@ -6,8 +6,8 @@
 #include "Value.hpp"
 #include "util.hpp"
 
-
-// ASTNode::ASTNode(Type type, Token const *token, Token const *typeToken) : type(type), token(token)
+// ASTNode::ASTNode(Type type, Token const *token, Token const *typeToken) :
+// type(type), token(token)
 // {
 //     switch ((*typeToken))
 //     {
@@ -73,9 +73,8 @@ WATExpr ASTNode::EmitModule(State &state) const {
 }
 
 std::vector<WATExpr> ASTNode::EmitLiteral(State &symbols) const {
-  std::string valueStr = std::visit([](auto&& value) {
-    return std::format("{}", value);
-  }, value->getValue());
+  std::string valueStr = std::visit(
+      [](auto &&value) { return std::format("{}", value); }, value->getValue());
   return WATExpr("i32.const", std::format("{}", valueStr))
       .Comment("Literal value")
       .Inline();
