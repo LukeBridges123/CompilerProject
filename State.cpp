@@ -51,7 +51,7 @@ size_t SymbolTable::AddVar(std::string const &name, VarType type,
     Error(line_num, "Redeclaration of variable ", name);
   }
   // Some way to know if the variable as been assigned
-  VariableInfo new_var_info = VariableInfo{name, line_num};
+  VariableInfo new_var_info = VariableInfo{name, line_num, type};
   size_t new_index = this->variables.size();
   variables.push_back(new_var_info);
   functions.back().variables.push_back(new_index);

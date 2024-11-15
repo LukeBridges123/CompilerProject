@@ -14,6 +14,7 @@ using scope_t = std::unordered_map<std::string, size_t>;
 struct VariableInfo {
   std::string name{};
   size_t line_declared{};
+  std::optional<VarType> typeVar = std::nullopt;
   bool is_assigned{};
 };
 
