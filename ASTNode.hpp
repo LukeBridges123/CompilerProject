@@ -88,6 +88,7 @@ public:
 
   VarType ReturnType(SymbolTable const &table) const;
 
+
 private:
   std::vector<ASTNode> children{};
 

@@ -6,12 +6,32 @@
 #include "Value.hpp"
 #include "util.hpp"
 
+
 VarType ASTNode::ReturnType(SymbolTable const &table) const {
   switch (type) {
   case LITERAL:
     return value.value().getType();
   case OPERATION:
-    return VarType::INT; // TODO
+    // logical/comparison operators + modulus always return an int
+    if (literal == "!" || literal == "||" || literal == "&&" || literal == "<" || literal == ">" || literal == "<=" ||
+        literal == ">=" || literal == "==" || literal == "!=" || literal == "%") {
+          return VarType::INT;
+        }
+    // sqrt always returns a double; easiest to have / do the same thing?
+    if (literal == "sqrt" || literal == "/") {
+      return VarType::DOUBLE;
+    }
+    if (literal == "-" && children.size() == 1){
+      return children.at(0).ReturnType(table);
+    }
+    // find type based on precision
+    if (literal == "+" || literal == "-" || literal == "*"){
+      assert(children.size() == 2);
+      VarType left_type = children.at(0).ReturnType(table);
+      VarType right_type = children.at(1).ReturnType(table);
+      return std::max(left_type, right_type);
+    }
+    ErrorNoLine("Invalid operation during type checking");
   case IDENTIFIER:
     return table.variables.at(var_id).type_var;
   case CONDITIONAL: {
