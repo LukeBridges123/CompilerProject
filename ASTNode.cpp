@@ -297,13 +297,14 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
 
 std::vector<WATExpr> ASTNode::EmitWhile(State &state) const {
   assert(children.size() == 2);
+
+  state.loop_idx.back()++;
+  state.loop_idx.push_back(0);
+
   // make labels ahead of time for ease of use
   std::string const loop_label = join(state.loop_idx, ".");
   std::string const loop_id = Variable("loop_", loop_label);
   std::string const loop_exit = Variable("loop_exit_", loop_label);
-
-  state.loop_idx.back()++;
-  state.loop_idx.push_back(0);
 
   // create loop block
   WATExpr block{"block", loop_exit};
