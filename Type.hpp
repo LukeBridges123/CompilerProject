@@ -6,7 +6,6 @@ using namespace emplex;
 
 class Value;
 
-// TODO: integrate with actual variable values
 class VarType {
 public:
   enum TypeId {
@@ -17,11 +16,16 @@ public:
     DOUBLE,
   };
 
+private:
+  static TypeId TypeFromValue(Value const &value);
+  static TypeId TypeFromToken(Token const &token);
+
+public:
   TypeId id;
 
   VarType(TypeId id) : id(id) {};
-  VarType(Token const &token);
-  VarType(Value const &value);
+  VarType(Token const &token) : id(TypeFromToken(token)) {};
+  VarType(Value const &value) : id(TypeFromValue(value)) {};
 
   operator TypeId() const { return id; }
 

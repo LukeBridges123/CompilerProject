@@ -10,8 +10,34 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
   switch (type) {
   case LITERAL:
     return value.value().getType();
+  case ASSIGN:
+    assert(children.size() == 2);
+    // TODO: once assignment chaining is implemented, should be this:
+    // return children.at(1).ReturnType(table);
+    return VarType::NONE;
   case OPERATION:
-    return VarType::INT; // TODO
+    // logical/comparison operators + modulus always return an int
+    if (literal == "!" || literal == "||" || literal == "&&" ||
+        literal == "<" || literal == ">" || literal == "<=" ||
+        literal == ">=" || literal == "==" || literal == "!=" ||
+        literal == "%") {
+      return VarType::INT;
+    }
+    // sqrt always returns a double; easiest to have / do the same thing?
+    if (literal == "sqrt") {
+      return VarType::DOUBLE;
+    }
+    if (literal == "-" && children.size() == 1) {
+      return children.at(0).ReturnType(table);
+    }
+    // find type based on precision
+    if (literal == "+" || literal == "-" || literal == "*" || literal == "/") {
+      assert(children.size() == 2);
+      VarType left_type = children.at(0).ReturnType(table);
+      VarType right_type = children.at(1).ReturnType(table);
+      return std::max(left_type, right_type);
+    }
+    ErrorNoLine("Invalid operation during type checking");
   case IDENTIFIER:
     return table.variables.at(var_id).type_var;
   case CONDITIONAL: {
@@ -25,6 +51,12 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
       return VarType::NONE; // different return type, ignore
     }
   }
+  case CAST_DOUBLE:
+    return VarType::DOUBLE;
+  case CAST_INT:
+    return VarType::INT;
+  case CAST_CHAR:
+    return VarType::CHAR;
   case RETURN:
     assert(children.size() == 1);
     return children.at(0).ReturnType(table);
@@ -36,6 +68,7 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
   case BREAK:
     return VarType::NONE;
   default:
+    assert(false);
     return VarType::UNKNOWN;
   }
 }
@@ -69,7 +102,23 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
     return ret;
   }
   case CAST_INT:
+    assert(children.size() == 1);
+    if (children.at(0).ReturnType(state.table) == VarType::DOUBLE) {
+      std::vector<WATExpr> ret = children.at(0).Emit(state);
+      ret.push_back(WATExpr{"i32.trunc_f64_s"});
+      return ret;
+    } else {
+      return children.at(0).Emit(state);
+    }
   case CAST_DOUBLE:
+    assert(children.size() == 1);
+    if (children.at(0).ReturnType(state.table) == VarType::INT) {
+      std::vector<WATExpr> ret = children.at(0).Emit(state);
+      ret.push_back(WATExpr{"f64.convert_i32_s"});
+      return ret;
+    } else {
+      return children.at(0).Emit(state);
+    }
   case CAST_CHAR:
     ErrorNoLine("Cast not implemented");
   case EMPTY:
@@ -95,7 +144,8 @@ WATExpr ASTNode::EmitModule(State &state) const {
   return out;
 }
 
-std::vector<WATExpr> ASTNode::EmitLiteral(State &symbols) const {
+std::vector<WATExpr>
+ASTNode::EmitLiteral([[maybe_unused]] State &symbols) const {
   std::string value_str = std::visit(
       [](auto &&value) { return std::format("{}", value); }, value->getValue());
   return WATExpr(value->getType().WATOperation("const"), value_str)
@@ -120,12 +170,17 @@ std::vector<WATExpr> ASTNode::EmitAssign(State &state) const {
 
   // this should produce some code which, when run, leaves the
   // rvalue on the stack
-  WATExpr rvalue = (children[1].Emit(state))[0];
-
-  return WATExpr{"local.set", {Variable("var", children[0].var_id)}, {rvalue}};
+  std::vector<WATExpr> rvalue = children.at(1).Emit(state);
+  VarType left_type = children.at(0).ReturnType(state.table);
+  VarType right_type = children.at(1).ReturnType(state.table);
+  if (left_type == VarType::DOUBLE && right_type == VarType::INT) {
+    rvalue.push_back(WATExpr{"f64.convert_i32_s"});
+  }
+  return WATExpr{"local.set", {Variable("var", children[0].var_id)}, rvalue};
 }
 
-std::vector<WATExpr> ASTNode::EmitIdentifier(State &state) const {
+std::vector<WATExpr>
+ASTNode::EmitIdentifier([[maybe_unused]] State &state) const {
   return WATExpr{"local.get", Variable("var", var_id)};
 }
 
@@ -135,8 +190,7 @@ std::vector<WATExpr> ASTNode::EmitConditional(State &state) const {
   WATExpr if_then_else{"if"};
 
   VarType rettype = ReturnType(state.table);
-  // TODO: remove the "unknown" check here
-  if (rettype != VarType::NONE && rettype != VarType::UNKNOWN) {
+  if (rettype != VarType::NONE) {
     if_then_else.Child("result", rettype.WATType()).Inline();
   }
 
@@ -169,76 +223,76 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     std::vector<WATExpr> expr = left;
     expr.push_back(cond);
     return expr;
-  } else if (literal == "-") {
+  } else if (literal == "-" && children.size() == 1) {
     WATExpr expr{left_type.WATOperation("mul")};
     WATExpr negative_one{left_type.WATOperation("const"), "-1"};
     expr.AddChildren({negative_one});
     expr.AddChildren(left);
     return expr;
   } else if (literal == "sqrt") {
-    ErrorNoLine("Not implemeneted (sqrt)");
+    WATExpr sqrt{"f64.sqrt"};
+    sqrt.AddChildren(left);
+    if (left_type == VarType::INT) {
+      WATExpr convert{"f64.convert_i32_s"};
+      sqrt.AddChildren(convert);
+    }
+
+    return sqrt;
   }
 
   // remaining operations are binary operations
   assert(children.size() == 2);
   std::vector<WATExpr> right = children.at(1).Emit(state);
-  VarType right_type = children.at(0).ReturnType(state.table);
+  VarType right_type = children.at(1).ReturnType(state.table);
+  VarType op_type = std::max(left_type, right_type);
 
-  // TODO: actual promotion
-  VarType rettype = std::max(left_type, right_type);
-  if (literal == "+") {
-    WATExpr expr{rettype.WATOperation("add")};
-    expr.AddChildren(left);
-    expr.AddChildren(right);
-    return expr;
-  } else if (literal == "-") {
-    WATExpr expr{rettype.WATOperation("sub")};
-    expr.AddChildren(left);
-    expr.AddChildren(right);
-    return expr;
-  } else if (literal == "*") {
-    WATExpr expr{rettype.WATOperation("mul")};
-    expr.AddChildren(left);
-    expr.AddChildren(right);
-    return expr;
-    // handle division later
-  } else if (literal == "%") {
-    WATExpr expr{"i32.rem_u"};
-    expr.AddChildren(left);
-    expr.AddChildren(right);
-    return expr;
-  } else if (literal == "<") {
-    WATExpr expr{rettype.WATOperation("lt", true)};
-    expr.AddChildren(left);
-    expr.AddChildren(right);
-    return expr;
-  } else if (literal == ">") {
-    WATExpr expr{rettype.WATOperation("gt", true)};
-    expr.AddChildren(left);
-    expr.AddChildren(right);
-    return expr;
-  } else if (literal == "<=") {
-    WATExpr expr{rettype.WATOperation("le", true)};
-    expr.AddChildren(left);
-    expr.AddChildren(right);
-    return expr;
-  } else if (literal == ">=") {
-    WATExpr expr{rettype.WATOperation("ge", true)};
-    expr.AddChildren(left);
-    expr.AddChildren(right);
-    return expr;
-  } else if (literal == "==") {
-    WATExpr expr{rettype.WATOperation("eq")};
-    expr.AddChildren(left);
-    expr.AddChildren(right);
-    return expr;
-  } else if (literal == "!=") {
-    WATExpr expr{rettype.WATOperation("ne")};
-    expr.AddChildren(left);
-    expr.AddChildren(right);
-    return expr;
+  if (literal == "&&") {
+    WATExpr test_first{"i32.eq"};
+    test_first.AddChildren(left);
+    test_first.Child(WATExpr{"i32.const", "0"});
+
+    WATExpr test_second{"i32.ne"};
+    test_second.AddChildren(right);
+    test_second.Child(WATExpr{"i32.const", "0"});
+    WATExpr cond{"if"};
+    cond.Child(WATExpr{"result", "i32"});
+    cond.Child(WATExpr{"then", {}, WATExpr{"i32.const 0"}});
+    cond.Child(WATExpr{"else", {}, test_second});
+    return {test_first, cond};
   }
-  ErrorNoLine("Not implemented (emit operation fallthrough)");
+
+  if (literal == "||") {
+    WATExpr test_first{"i32.eq"};
+    test_first.AddChildren(left);
+    test_first.Child(WATExpr{"i32.const", "1"});
+
+    WATExpr test_second{"i32.ne"};
+    test_second.AddChildren(right);
+    test_second.Child(WATExpr{"i32.const", "0"});
+    WATExpr cond{"if"};
+    cond.Child(WATExpr{"result", "i32"});
+    cond.Child(WATExpr{"then", {}, WATExpr{"i32.const 1"}});
+    cond.Child(WATExpr{"else", {}, test_second});
+    return {test_first, cond};
+  }
+
+  std::string op_name = LITERAL_TO_WAT.at(literal);
+  // that second argument is there to duplicate the way that the previous code
+  // set "signed" to true for compare ops
+  WATExpr expr{op_type.WATOperation(
+      op_name, (literal == "<" || literal == ">" || literal == "<=" ||
+                literal == ">=" || literal == "/"))};
+
+  expr.AddChildren(left);
+  if (left_type == VarType::INT && right_type == VarType::DOUBLE) {
+    expr.AddChildren(WATExpr{right_type.WATOperation("convert_i32_s")});
+  }
+  expr.AddChildren(right);
+  if (right_type == VarType::INT && left_type == VarType::DOUBLE) {
+    expr.AddChildren(WATExpr{left_type.WATOperation("convert_i32_s")});
+  }
+
+  return expr;
 }
 
 std::vector<WATExpr> ASTNode::EmitWhile(State &state) const {

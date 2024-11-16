@@ -4,28 +4,28 @@
 
 #include <stdexcept>
 
-VarType::VarType(Token const &token) {
-  std::string const &lexeme = token.lexeme;
-  if (lexeme == "int") {
-    id = VarType::INT;
-  } else if (lexeme == "char") {
-    id = VarType::CHAR;
-  } else if (lexeme == "double") {
-    id = VarType::DOUBLE;
+VarType::TypeId VarType::TypeFromValue(const Value &value) {
+  if (std::holds_alternative<int>(value.getVariant())) {
+    return VarType::INT;
+  } else if (std::holds_alternative<double>(value.getVariant())) {
+    return VarType::DOUBLE;
+  } else if (std::holds_alternative<char>(value.getVariant())) {
+    return VarType::CHAR;
   } else {
-    Error(token, "Unknown type ", lexeme);
+    Error(value.line_declared, "Unknown type!");
   }
 }
 
-VarType::VarType(Value const &value) {
-  if (std::holds_alternative<int>(value.getVariant())) {
-    id = VarType::INT;
-  } else if (std::holds_alternative<double>(value.getVariant())) {
-    id = VarType::DOUBLE;
-  } else if (std::holds_alternative<char>(value.getVariant())) {
-    id = VarType::CHAR;
+VarType::TypeId VarType::TypeFromToken(const Token &token) {
+  std::string const &lexeme = token.lexeme;
+  if (lexeme == "int") {
+    return VarType::INT;
+  } else if (lexeme == "char") {
+    return VarType::CHAR;
+  } else if (lexeme == "double") {
+    return VarType::DOUBLE;
   } else {
-    Error(value.line_declared, "Unknown type!");
+    Error(token, "Unknown type ", lexeme);
   }
 }
 
@@ -56,7 +56,7 @@ std::string VarType::WATType() const {
 
 std::string VarType::WATOperation(std::string operation, bool is_signed) const {
   std::string inst = WATType() + "." + operation;
-  if (is_signed && id == INT) {
+  if (is_signed && (id == INT || id == CHAR)) {
     inst += "_s";
   }
   return inst;

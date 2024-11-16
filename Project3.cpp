@@ -4,7 +4,6 @@
 #include <string>
 
 #include <utility>
-#include <variant>
 #include <vector>
 
 #include "ASTNode.hpp"
@@ -68,7 +67,7 @@ private:
     Token func_name = ExpectToken(Lexer::ID_ID);
     size_t func_id = table.AddFunction(func_name.lexeme, func_name.line_id);
     FunctionInfo &func_info = table.functions.at(func_id);
-    ASTNode function{ASTNode::FUNCTION, func_id, &func_name};
+    ASTNode function{ASTNode::FUNCTION, func_id};
 
     table.PushScope();
 
@@ -115,14 +114,19 @@ private:
 
     ASTNode expr = ParseExpr();
     ExpectToken(Lexer::ID_ENDLINE);
+    VarType right_type = expr.ReturnType(table);
+    if (var_type < right_type) {
+      Error(
+          CurToken(),
+          "Tried to assign higher-precision value to lower-precision variable");
+    }
 
     // don't add until _after_ we possibly resolve idents in expression
     // ex. var foo = foo should error if foo is undefined
     size_t var_id = table.AddVar(ident.lexeme, var_type, ident.line_id);
 
     ASTNode out = ASTNode{ASTNode::ASSIGN};
-    out.AddChildren(ASTNode(ASTNode::IDENTIFIER, var_id, &ident),
-                    std::move(expr));
+    out.AddChildren(ASTNode(ASTNode::IDENTIFIER, var_id), std::move(expr));
 
     return out;
   }
@@ -138,6 +142,12 @@ private:
       }
       ExpectToken(Lexer::ID_ASSIGN);
       ASTNode rhs = ParseAssign();
+      VarType left_type = lhs.ReturnType(table);
+      VarType right_type = rhs.ReturnType(table);
+      if (left_type < right_type) {
+        Error(CurToken(), "Tried to assign higher-precision value to "
+                          "lower-precision variable");
+      }
       return ASTNode(ASTNode::ASSIGN, "=", std::move(lhs), std::move(rhs));
     }
     return lhs;
@@ -148,6 +158,11 @@ private:
     while (CurToken().lexeme == "||") {
       ConsumeToken();
       ASTNode rhs = ParseAnd();
+
+      if (lhs->ReturnType(table) != VarType::INT ||
+          rhs.ReturnType(table) != VarType::INT) {
+        Error(CurToken(), "Used non-int value in an or expression");
+      }
       lhs = std::make_unique<ASTNode>(
           ASTNode(ASTNode::OPERATION, "||", std::move(*lhs), std::move(rhs)));
     }
@@ -159,6 +174,10 @@ private:
     while (CurToken().lexeme == "&&") {
       ConsumeToken();
       ASTNode rhs = ParseEquals();
+      if (lhs->ReturnType(table) != VarType::INT ||
+          rhs.ReturnType(table) != VarType::INT) {
+        Error(CurToken(), "Used non-int value in an and expression");
+      }
       lhs = std::make_unique<ASTNode>(
           ASTNode(ASTNode::OPERATION, "&&", std::move(*lhs), std::move(rhs)));
     }
@@ -272,7 +291,7 @@ private:
     }
 
     if (token.lexeme == ":char") {
-      ASTNode out{ASTNode::CAST_DOUBLE};
+      ASTNode out{ASTNode::CAST_CHAR};
       out.AddChildren(std::move(node));
       return out;
     }
@@ -292,9 +311,9 @@ private:
     case Lexer::ID_CHAR:
       return CheckTypeCast(ASTNode(ASTNode::LITERAL, ConsumeToken().lexeme[1]));
     case Lexer::ID_ID:
-      return CheckTypeCast(ASTNode(
-          ASTNode::IDENTIFIER,
-          table.FindVar(ConsumeToken().lexeme, current.line_id), &current));
+      return CheckTypeCast(
+          ASTNode(ASTNode::IDENTIFIER,
+                  table.FindVar(ConsumeToken().lexeme, current.line_id)));
     case Lexer::ID_OPEN_PARENTHESIS: {
       ExpectToken(Lexer::ID_OPEN_PARENTHESIS);
       ASTNode subexpression = ParseExpr();
@@ -310,9 +329,13 @@ private:
     case Lexer::ID_NOT:
       ConsumeToken();
       return ParseNOT();
-    case Lexer::ID_SQRT:
+    case Lexer::ID_SQRT: {
       ConsumeToken();
-      return ParseSqrt();
+      ExpectToken(Lexer::ID_OPEN_PARENTHESIS);
+      ASTNode subexpr = ParseSqrt();
+      ExpectToken(Lexer::ID_CLOSE_PARENTHESIS);
+      return CheckTypeCast(std::move(subexpr));
+    }
     default:
       ErrorUnexpected(current);
     }
