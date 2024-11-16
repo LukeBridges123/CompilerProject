@@ -1,8 +1,8 @@
 #pragma once
 #include "Type.hpp"
 
-#include <optional>
-#include <string>
+#include <stdexcept>
+#include <type_traits>
 #include <variant>
 
 using ValueType = std::variant<int, double, char>;
@@ -19,7 +19,7 @@ public:
   template <typename T>
   Value(size_t line, T val) : value(val), line_declared(line){};
 
-  template <typename T> Value(T val) : value(val){};
+  template <typename T> Value(T &&val) : value(std::forward<T>(val)){};
 
   // Constructor for variable declaration without value
   // Value(Type type, size_t line);
@@ -35,5 +35,16 @@ public:
 
   // Checks if the type of the value given is the same as the variant declared
   // and updates the value
-  template <typename T> void UpdateValue(T val);
+  template <typename T> void UpdateValue(T val) {
+    // Check if the types are the same
+    bool is_same_type = std::visit(std::is_same_v<decltype(val), T>, value);
+
+    if (!is_same_type) {
+      // Todo: Give better error
+      throw std::invalid_argument("Invalid assignment to a different Type!");
+    }
+
+    value = val;
+    assigned = true;
+  }
 };

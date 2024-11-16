@@ -3,6 +3,8 @@
 #include <memory>
 #include <string>
 
+#include <utility>
+#include <variant>
 #include <vector>
 
 #include "ASTNode.hpp"
@@ -11,6 +13,8 @@
 #include "Type.hpp"
 #include "WAT.hpp"
 #include "lexer.hpp"
+
+using std::in_place_type;
 
 using namespace emplex;
 
@@ -101,10 +105,10 @@ private:
   }
 
   ASTNode ParseDecl() {
-    Token const &varType = ExpectToken(Lexer::ID_TYPE);
+    VarType const &var_type = ExpectToken(Lexer::ID_TYPE);
     Token const &ident = ExpectToken(Lexer::ID_ID);
     if (IfToken(Lexer::ID_ENDLINE)) {
-      table.AddVar(ident.lexeme, VarType(varType), ident.line_id);
+      table.AddVar(ident.lexeme, var_type, ident.line_id);
       return ASTNode{};
     }
     ExpectToken(Lexer::ID_ASSIGN);
@@ -114,7 +118,7 @@ private:
 
     // don't add until _after_ we possibly resolve idents in expression
     // ex. var foo = foo should error if foo is undefined
-    size_t var_id = table.AddVar(ident.lexeme, VarType(varType), ident.line_id);
+    size_t var_id = table.AddVar(ident.lexeme, var_type, ident.line_id);
 
     ASTNode out = ASTNode{ASTNode::ASSIGN};
     out.AddChildren(ASTNode(ASTNode::IDENTIFIER, var_id, &ident),
@@ -202,14 +206,14 @@ private:
       std::string operation = ConsumeToken().lexeme;
       ASTNode rhs = ParseTerm();
 
-      if (lhs->getType()->id == VarType::CHAR ||
-          rhs.getType()->id == VarType::CHAR) {
+      if (lhs->ReturnType(table) == VarType::CHAR ||
+          rhs.ReturnType(table) == VarType::CHAR) {
         Error(CurToken(), "Invalid action: Cannot perform multiplication, "
-                          "division, or modulus wtih a char type!");
+                          "division, or modulus with a char type!");
       }
 
-      if (operation == "%" && (lhs->getType()->id == VarType::DOUBLE ||
-                               rhs.getType()->id == VarType::DOUBLE)) {
+      if (operation == "%" && (lhs->ReturnType(table) == VarType::DOUBLE ||
+                               rhs.ReturnType(table) == VarType::DOUBLE)) {
         Error(CurToken(),
               "Invalid action: Cannot perform modulus with a double type!");
       }
@@ -225,7 +229,7 @@ private:
     Token const &curr_token = CurToken();
     auto rhs = ParseTerm();
 
-    if (rhs.getType()->id == VarType::CHAR) {
+    if (rhs.ReturnType(table) == VarType::CHAR) {
       Error(curr_token, "Invalid action: Cannot negate a char type!");
     }
 
@@ -236,7 +240,7 @@ private:
     Token const curr_token = CurToken();
     auto rhs = ParseTerm();
 
-    if (rhs.getType()->id != VarType::INT) {
+    if (rhs.ReturnType(table) != VarType::INT) {
       Error(curr_token, "Invalid action: Cannot perform a logical \"NOT\" on a "
                         "type thats not an INT!");
     }
@@ -271,9 +275,11 @@ private:
     Token const &current = CurToken();
     switch (current) {
     case Lexer::ID_FLOAT:
-    case Lexer::ID_INT:
       return CheckTypeCast(
           ASTNode(ASTNode::LITERAL, std::stod(ConsumeToken().lexeme)));
+    case Lexer::ID_INT:
+      return CheckTypeCast(
+          ASTNode(ASTNode::LITERAL, std::stoi(ConsumeToken().lexeme)));
     case Lexer::ID_CHAR:
       return CheckTypeCast(ASTNode(ASTNode::LITERAL, ConsumeToken().lexeme[1]));
     case Lexer::ID_ID:

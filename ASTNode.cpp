@@ -6,22 +6,39 @@
 #include "Value.hpp"
 #include "util.hpp"
 
-// ASTNode::ASTNode(Type type, Token const *token, Token const *typeToken) :
-// type(type), token(token)
-// {
-//     switch ((*typeToken))
-//     {
-//     case Lexer::ID_FLOAT:
-//     case Lexer::ID_INT:
-//         value = Value{token->line_id, std::stod(token->lexeme)};
-//         break;
-//     case Lexer::ID_CHAR:
-//         value = Value{token->line_id, token->lexeme[1]};
-//         break;
-//     default:
-//         break;
-//     }
-// }
+VarType ASTNode::ReturnType(SymbolTable const &table) const {
+  switch (type) {
+  case LITERAL:
+    return value.value().getType();
+  case OPERATION:
+    return VarType::INT; // TODO
+  case IDENTIFIER:
+    return table.variables.at(var_id).type_var;
+  case CONDITIONAL: {
+    assert(children.size() == 2 || children.size() == 3);
+    if (children.size() == 2) // only true branch, so false branch always none
+      return VarType::NONE;
+    VarType then_type = children.at(1).ReturnType(table);
+    if (then_type == children.at(2).ReturnType(table)) {
+      return then_type; // same return type, use it
+    } else {
+      return VarType::NONE; // different return type, ignore
+    }
+  }
+  case RETURN:
+    assert(children.size() == 1);
+    return children.at(0).ReturnType(table);
+  case SCOPE:
+    if (children.size() == 0)
+      return VarType::NONE;
+    return children.back().ReturnType(table);
+  case CONTINUE:
+  case BREAK:
+    return VarType::NONE;
+  default:
+    return VarType::UNKNOWN;
+  }
+}
 
 std::vector<WATExpr> ASTNode::Emit(State &state) const {
   switch (type) {
@@ -47,7 +64,9 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
     return EmitContinue(state);
   case RETURN: {
     assert(children.size() == 1);
-    return children.at(0).Emit(state);
+    WATExpr ret{"return"};
+    ret.AddChildren(children.at(0).Emit(state));
+    return ret;
   }
   case EMPTY:
     return {};
@@ -113,43 +132,21 @@ std::vector<WATExpr> ASTNode::EmitIdentifier(State &state) const {
 }
 
 std::vector<WATExpr> ASTNode::EmitConditional(State &state) const {
-  // conditional statement is of the form "if (expression1) statment1 else
-  // statement2" so a conditional node should have 2 or 3 children: an
-  // expression, a statement, and possibly another statement run the first
-  // one; if it gives a nonzero value, run the second; otherwise, run the
-  // third, if it exists
-  // assert(children.size() == 2 || children.size() == 3);
-
-  // double condition = children[0].EmitExpect(state.table);
-  // if (condition != 0) {
-  //   children[1].Emit(state);
-  //   return;
-  // }
-
-  // if (children.size() < 3) {
-  //   return;
-  // }
-
-  // children[2].Emit(state);
   assert(children.size() == 2 || children.size() == 3);
   std::vector<WATExpr> condition = children[0].Emit(state);
   WATExpr if_then_else{"if"};
 
-  if (children.size() == 3 && children[1].type == RETURN &&
-      children[2].type == RETURN) {
-    if_then_else.Child(WATExpr{"result", "i32"}); // another awful hack
+  VarType rettype = ReturnType(state.table);
+  // TODO: remove the "unknown" check here
+  if (rettype != VarType::NONE && rettype != VarType::UNKNOWN) {
+    if_then_else.Child("result", rettype.WATType()).Inline();
   }
 
   WATExpr then = WATExpr{"then", {}, children[1].Emit(state)};
-  if (children[1].type == RETURN) {
-    then.Child(WATExpr{"return"}); // awful hack
-  }
   if_then_else.Child(then);
+
   if (children.size() == 3) {
     WATExpr else_expr{"else", {}, children[2].Emit(state)};
-    if (children[1].type == RETURN) {
-      else_expr.Child(WATExpr{"return"}); // awful hack
-    }
     if_then_else.Child(else_expr);
   }
   condition.push_back(if_then_else);
@@ -290,26 +287,24 @@ std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {
   // write out parameters (first info.parameters values in info.variables)
   for (size_t var_id : info.variables | std::views::take(info.parameters)) {
     VariableInfo const &param = state.table.variables.at(var_id);
-    function.Child("param", Variable("var", var_id), param.typeVar->WATType())
+    function.Child("param", Variable("var", var_id), param.type_var.WATType())
         .Inline();
   }
 
-  // add result to function and its exit block
+  // add result to function
   WATExpr result = WATExpr("result", info.rettype.WATType()).Inline();
   function.Child(result);
 
   // write out locals (remaining values in info.variables)
   for (size_t var_id : info.variables | std::views::drop(info.parameters)) {
     VariableInfo const &var = state.table.variables.at(var_id);
-    function.Child("local", Variable("var", var_id), var.typeVar->WATType())
-        .Comment("Declare " + var.typeVar->TypeName() + " " + var.name);
+    function.Child("local", Variable("var", var_id), var.type_var.WATType())
+        .Comment("Declare " + var.type_var.TypeName() + " " + var.name);
   }
-
-  WATExpr &block = function.Child("block", Variable("fun_exit"));
-  block.Child(result);
 
   for (ASTNode const &child : children) {
-    block.AddChildren(child.Emit(state));
+    function.AddChildren(child.Emit(state));
   }
+
   return function;
 }

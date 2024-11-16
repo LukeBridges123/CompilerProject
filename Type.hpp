@@ -11,6 +11,7 @@ class VarType {
 public:
   enum TypeId {
     UNKNOWN,
+    NONE,
     CHAR,
     INT,
     DOUBLE,
@@ -21,6 +22,8 @@ public:
   VarType(TypeId id) : id(id) {};
   VarType(Token const &token);
   VarType(Value const &value);
+
+  operator TypeId() const { return id; }
 
   std::string TypeName() const;
   std::string WATType() const;
