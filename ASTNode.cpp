@@ -68,6 +68,10 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
     ret.AddChildren(children.at(0).Emit(state));
     return ret;
   }
+  case CAST_INT:
+  case CAST_DOUBLE:
+  case CAST_CHAR:
+    ErrorNoLine("Cast not implemented");
   case EMPTY:
     return {};
   case MODULE: // module should be called manually on root node

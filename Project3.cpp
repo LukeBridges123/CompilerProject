@@ -254,32 +254,30 @@ private:
   }
 
   ASTNode CheckTypeCast(ASTNode node) {
-    Token const curr_token = CurToken();
-
-    if (curr_token != Lexer::ID_TYPE_CAST) {
+    if (CurToken() != Lexer::ID_TYPE_CAST) {
       return node;
     }
+    Token const &token = ConsumeToken();
 
-    if (curr_token.lexeme == ":int") {
+    if (token.lexeme == ":int") {
       ASTNode out{ASTNode::CAST_INT};
       out.AddChildren(std::move(node));
       return out;
     }
 
-    if (curr_token.lexeme == ":double") {
+    if (token.lexeme == ":double") {
       ASTNode out{ASTNode::CAST_DOUBLE};
       out.AddChildren(std::move(node));
       return out;
     }
 
-    if (curr_token.lexeme == ":char") {
+    if (token.lexeme == ":char") {
       ASTNode out{ASTNode::CAST_DOUBLE};
       out.AddChildren(std::move(node));
       return out;
     }
 
-    Error(curr_token, "Attempt to cast to unknown type ",
-          curr_token.lexeme.substr(1));
+    Error(token, "Attempt to cast to unknown type ", token.lexeme.substr(1));
   }
 
   ASTNode ParseTerm() {
