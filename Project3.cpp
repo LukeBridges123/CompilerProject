@@ -266,9 +266,20 @@ private:
       return out;
     }
 
-    ASTNode out{ASTNode::CAST_DOUBLE};
-    out.AddChildren(std::move(node));
-    return out;
+    if (curr_token.lexeme == ":double") {
+      ASTNode out{ASTNode::CAST_DOUBLE};
+      out.AddChildren(std::move(node));
+      return out;
+    }
+
+    if (curr_token.lexeme == ":char") {
+      ASTNode out{ASTNode::CAST_DOUBLE};
+      out.AddChildren(std::move(node));
+      return out;
+    }
+
+    Error(curr_token, "Attempt to cast to unknown type ",
+          curr_token.lexeme.substr(1));
   }
 
   ASTNode ParseTerm() {
