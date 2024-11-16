@@ -56,7 +56,7 @@ std::string VarType::WATType() const {
 
 std::string VarType::WATOperation(std::string operation, bool is_signed) const {
   std::string inst = WATType() + "." + operation;
-  if (is_signed && id == INT) {
+  if (is_signed && (id == INT || id == CHAR)) {
     inst += "_s";
   }
   return inst;

@@ -6,6 +6,6 @@ const ValueType Value::getValue() const {
   } else if (std::holds_alternative<double>(value)) {
     return std::get<double>(value);
   } else {
-    return std::get<char>(value);
+    return (int)std::get<char>(value);
   }
 }

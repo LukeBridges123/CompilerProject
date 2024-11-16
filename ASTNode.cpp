@@ -218,7 +218,7 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     std::vector<WATExpr> expr = left;
     expr.push_back(cond);
     return expr;
-  } else if (literal == "-") {
+  } else if (literal == "-" && children.size() == 1) {
     WATExpr expr{left_type.WATOperation("mul")};
     WATExpr negative_one{left_type.WATOperation("const"), "-1"};
     expr.AddChildren({negative_one});
