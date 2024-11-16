@@ -49,5 +49,5 @@ public:
 
 struct State {
   SymbolTable const table;
-  std::vector<size_t> loop_idx = {0};
+  std::vector<size_t> loop_idx = {};
 };
