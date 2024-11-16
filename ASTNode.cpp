@@ -45,6 +45,12 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
       return VarType::NONE; // different return type, ignore
     }
   }
+  case CAST_DOUBLE:
+    return VarType::DOUBLE;
+  case CAST_INT:
+    return VarType::INT;
+  case CAST_CHAR:
+    return VarType::CHAR;
   case RETURN:
     assert(children.size() == 1);
     return children.at(0).ReturnType(table);
@@ -118,7 +124,23 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
     return ret;
   }
   case CAST_INT:
+    assert(children.size() == 1);
+    if (1 || children.at(0).ReturnType(state.table) == VarType::DOUBLE){
+      std::vector<WATExpr> ret = children.at(0).Emit(state);
+      ret.push_back(WATExpr{"i32.trunc_f64_s"});
+      return ret;
+    } else {
+      return children.at(0).Emit(state);
+    }
   case CAST_DOUBLE:
+    assert(children.size() == 1);
+    if (children.at(0).ReturnType(state.table) == VarType::INT){
+      std::vector<WATExpr> ret = children.at(0).Emit(state);
+      ret.push_back(WATExpr{"f64.convert_i32_s"});
+      return ret;
+    } else {
+      return children.at(0).Emit(state);
+    }
   case CAST_CHAR:
     ErrorNoLine("Cast not implemented");
   case EMPTY:
@@ -169,9 +191,9 @@ std::vector<WATExpr> ASTNode::EmitAssign(State &state) const {
 
   // this should produce some code which, when run, leaves the
   // rvalue on the stack
-  WATExpr rvalue = (children[1].Emit(state))[0];
+  std::vector<WATExpr> rvalue = children.at(1).Emit(state);
 
-  return WATExpr{"local.set", {Variable("var", children[0].var_id)}, {rvalue}};
+  return WATExpr{"local.set", {Variable("var", children[0].var_id)}, rvalue};
 }
 
 std::vector<WATExpr> ASTNode::EmitIdentifier(State &state) const {
