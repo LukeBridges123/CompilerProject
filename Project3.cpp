@@ -310,9 +310,13 @@ private:
     case Lexer::ID_NOT:
       ConsumeToken();
       return ParseNOT();
-    case Lexer::ID_SQRT:
+    case Lexer::ID_SQRT: {
       ConsumeToken();
-      return ParseSqrt();
+      ExpectToken(Lexer::ID_OPEN_PARENTHESIS);
+      ASTNode subexpr = ParseSqrt();
+      ExpectToken(Lexer::ID_CLOSE_PARENTHESIS);
+      return CheckTypeCast(std::move(subexpr));
+    }
     default:
       ErrorUnexpected(current);
     }

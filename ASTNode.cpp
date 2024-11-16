@@ -251,7 +251,13 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     expr.AddChildren(left);
     return expr;
   } else if (literal == "sqrt") {
-    ErrorNoLine("Not implemeneted (sqrt)");
+    WATExpr sqrt{"f64.sqrt"};
+    if (left_type == VarType::INT) {
+      WATExpr convert{"f64.convert_i32_s"};
+      sqrt.AddChildren(convert);
+    }
+    sqrt.AddChildren(left);
+    return sqrt;
   }
 
   // remaining operations are binary operations
