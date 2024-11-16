@@ -3,12 +3,19 @@
 #include <cmath>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "State.hpp"
 #include "Type.hpp"
 #include "Value.hpp"
 #include "WAT.hpp"
+
+const std::unordered_map<std::string, std::string> LITERAL_TO_WAT = {
+    {"+", "add"},   {"*", "mul"}, {"-", "sub"}, {"/", "div"},
+    {"%", "rem_u"}, {"<", "lt"},  {">", "gt"},  {"<=", "le"},
+    {">=", "ge"},   {"==", "eq"}, {"!=", "ne"},
+};
 
 class ASTNode {
 public:

@@ -67,35 +67,6 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
   }
 }
 
-// could probably just replace this with a map tbh
-std::string LiteralToWATOp(std::string const &literal) {
-  if (literal == "+") {
-    return "add";
-  } else if (literal == "*") {
-    return "mul";
-  } else if (literal == "-") {
-    return "sub";
-  } else if (literal == "/") {
-    return "div";
-  } else if (literal == "%") {
-    return "rem_u";
-  } else if (literal == "<") {
-    return "lt";
-  } else if (literal == ">") {
-    return "gt";
-  } else if (literal == "<=") {
-    return "le";
-  } else if (literal == ">=") {
-    return "ge";
-  } else if (literal == "==") {
-    return "eq";
-  } else if (literal == "!=") {
-    return "ne";
-  } else {
-    ErrorNoLine("Invalid operation passed to LiteralToWATOp");
-  }
-}
-
 std::vector<WATExpr> ASTNode::Emit(State &state) const {
   switch (type) {
   case SCOPE:
@@ -299,7 +270,7 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     return {test_first, cond};
   }
 
-  std::string op_name = LiteralToWATOp(literal);
+  std::string op_name = LITERAL_TO_WAT.at(literal);
   // that second argument is there to duplicate the way that the previous code
   // set "signed" to true for compare ops
   WATExpr expr{op_type.WATOperation(
@@ -314,62 +285,8 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
   if (right_type == VarType::INT && left_type == VarType::DOUBLE) {
     expr.AddChildren(WATExpr{left_type.WATOperation("convert_i32_s")});
   }
+
   return expr;
-  /*
-  if (literal == "+") {
-    WATExpr expr{rettype.WATOperation("add")};
-    expr.AddChildren(left);
-    expr.AddChildren(right);
-    return expr;
-  } else if (literal == "-") {
-    WATExpr expr{rettype.WATOperation("sub")};
-    expr.AddChildren(left);
-    expr.AddChildren(right);
-    return expr;
-  } else if (literal == "*") {
-    WATExpr expr{rettype.WATOperation("mul")};
-    expr.AddChildren(left);
-    expr.AddChildren(right);
-    return expr;
-    // handle division later
-  } else if (literal == "%") {
-    WATExpr expr{"i32.rem_u"};
-    expr.AddChildren(left);
-    expr.AddChildren(right);
-    return expr;
-  } else if (literal == "<") {
-    WATExpr expr{rettype.WATOperation("lt", true)};
-    expr.AddChildren(left);
-    expr.AddChildren(right);
-    return expr;
-  } else if (literal == ">") {
-    WATExpr expr{rettype.WATOperation("gt", true)};
-    expr.AddChildren(left);
-    expr.AddChildren(right);
-    return expr;
-  } else if (literal == "<=") {
-    WATExpr expr{rettype.WATOperation("le", true)};
-    expr.AddChildren(left);
-    expr.AddChildren(right);
-    return expr;
-  } else if (literal == ">=") {
-    WATExpr expr{rettype.WATOperation("ge", true)};
-    expr.AddChildren(left);
-    expr.AddChildren(right);
-    return expr;
-  } else if (literal == "==") {
-    WATExpr expr{rettype.WATOperation("eq")};
-    expr.AddChildren(left);
-    expr.AddChildren(right);
-    return expr;
-  } else if (literal == "!=") {
-    WATExpr expr{rettype.WATOperation("ne")};
-    expr.AddChildren(left);
-    expr.AddChildren(right);
-    return expr;
-  }
-  */
-  ErrorNoLine("Not implemented (emit operation fallthrough)");
 }
 
 std::vector<WATExpr> ASTNode::EmitWhile(State &state) const {
