@@ -6,26 +6,27 @@
 #include "Value.hpp"
 #include "util.hpp"
 
-
 VarType ASTNode::ReturnType(SymbolTable const &table) const {
   switch (type) {
   case LITERAL:
     return value.value().getType();
   case OPERATION:
     // logical/comparison operators + modulus always return an int
-    if (literal == "!" || literal == "||" || literal == "&&" || literal == "<" || literal == ">" || literal == "<=" ||
-        literal == ">=" || literal == "==" || literal == "!=" || literal == "%") {
-          return VarType::INT;
-        }
+    if (literal == "!" || literal == "||" || literal == "&&" ||
+        literal == "<" || literal == ">" || literal == "<=" ||
+        literal == ">=" || literal == "==" || literal == "!=" ||
+        literal == "%") {
+      return VarType::INT;
+    }
     // sqrt always returns a double; easiest to have / do the same thing?
     if (literal == "sqrt") {
       return VarType::DOUBLE;
     }
-    if (literal == "-" && children.size() == 1){
+    if (literal == "-" && children.size() == 1) {
       return children.at(0).ReturnType(table);
     }
     // find type based on precision
-    if (literal == "+" || literal == "-" || literal == "*" || literal == "/"){
+    if (literal == "+" || literal == "-" || literal == "*" || literal == "/") {
       assert(children.size() == 2);
       VarType left_type = children.at(0).ReturnType(table);
       VarType right_type = children.at(1).ReturnType(table);
@@ -66,9 +67,9 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
   }
 }
 
-//could probably just replace this with a map tbh
-std::string LiteralToWATOp(std::string const & literal) {
-  if (literal == "+"){
+// could probably just replace this with a map tbh
+std::string LiteralToWATOp(std::string const &literal) {
+  if (literal == "+") {
     return "add";
   } else if (literal == "*") {
     return "mul";
@@ -86,7 +87,7 @@ std::string LiteralToWATOp(std::string const & literal) {
     return "le";
   } else if (literal == ">=") {
     return "ge";
-  } else if (literal == "=="){
+  } else if (literal == "==") {
     return "eq";
   } else if (literal == "!=") {
     return "ne";
@@ -125,7 +126,7 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
   }
   case CAST_INT:
     assert(children.size() == 1);
-    if (children.at(0).ReturnType(state.table) == VarType::DOUBLE){
+    if (children.at(0).ReturnType(state.table) == VarType::DOUBLE) {
       std::vector<WATExpr> ret = children.at(0).Emit(state);
       ret.push_back(WATExpr{"i32.trunc_f64_s"});
       return ret;
@@ -134,7 +135,7 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
     }
   case CAST_DOUBLE:
     assert(children.size() == 1);
-    if (children.at(0).ReturnType(state.table) == VarType::INT){
+    if (children.at(0).ReturnType(state.table) == VarType::INT) {
       std::vector<WATExpr> ret = children.at(0).Emit(state);
       ret.push_back(WATExpr{"f64.convert_i32_s"});
       return ret;
@@ -194,7 +195,7 @@ std::vector<WATExpr> ASTNode::EmitAssign(State &state) const {
   std::vector<WATExpr> rvalue = children.at(1).Emit(state);
   VarType left_type = children.at(0).ReturnType(state.table);
   VarType right_type = children.at(1).ReturnType(state.table);
-  if (left_type == VarType::DOUBLE && right_type == VarType::INT){
+  if (left_type == VarType::DOUBLE && right_type == VarType::INT) {
     rvalue.push_back(WATExpr{"f64.convert_i32_s"});
   }
   return WATExpr{"local.set", {Variable("var", children[0].var_id)}, rvalue};
@@ -257,7 +258,7 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
       WATExpr convert{"f64.convert_i32_s"};
       sqrt.AddChildren(convert);
     }
-    
+
     return sqrt;
   }
 
@@ -268,7 +269,7 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
   VarType rettype = ReturnType(state.table);
   VarType op_type = std::max(left_type, right_type);
 
-  if (literal == "&&"){
+  if (literal == "&&") {
     WATExpr test_first{"i32.eq"};
     test_first.AddChildren(left);
     test_first.Child(WATExpr{"i32.const", "0"});
@@ -283,7 +284,7 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     return {test_first, cond};
   }
 
-  if (literal == "||"){
+  if (literal == "||") {
     WATExpr test_first{"i32.eq"};
     test_first.AddChildren(left);
     test_first.Child(WATExpr{"i32.const", "1"});
@@ -299,16 +300,18 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
   }
 
   std::string op_name = LiteralToWATOp(literal);
-  // that second argument is there to duplicate the way that the previous code set "signed" to true for compare ops
-  WATExpr expr{op_type.WATOperation(op_name, (literal == "<" || literal == ">" || literal == "<=" || literal == ">=" || literal == "/"))};
-
+  // that second argument is there to duplicate the way that the previous code
+  // set "signed" to true for compare ops
+  WATExpr expr{op_type.WATOperation(
+      op_name, (literal == "<" || literal == ">" || literal == "<=" ||
+                literal == ">=" || literal == "/"))};
 
   expr.AddChildren(left);
-  if (left_type == VarType::INT && right_type == VarType::DOUBLE){
+  if (left_type == VarType::INT && right_type == VarType::DOUBLE) {
     expr.AddChildren(WATExpr{right_type.WATOperation("convert_i32_s")});
   }
   expr.AddChildren(right);
-  if (right_type == VarType::INT && left_type == VarType::DOUBLE){
+  if (right_type == VarType::INT && left_type == VarType::DOUBLE) {
     expr.AddChildren(WATExpr{left_type.WATOperation("convert_i32_s")});
   }
   return expr;

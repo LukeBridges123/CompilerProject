@@ -116,8 +116,10 @@ private:
     ASTNode expr = ParseExpr();
     ExpectToken(Lexer::ID_ENDLINE);
     VarType right_type = expr.ReturnType(table);
-    if (var_type < right_type){
-      Error(CurToken(), "Tried to assign higher-precision value to lower-precision variable");
+    if (var_type < right_type) {
+      Error(
+          CurToken(),
+          "Tried to assign higher-precision value to lower-precision variable");
     }
 
     // don't add until _after_ we possibly resolve idents in expression
@@ -144,8 +146,9 @@ private:
       ASTNode rhs = ParseAssign();
       VarType left_type = lhs.ReturnType(table);
       VarType right_type = rhs.ReturnType(table);
-      if (left_type < right_type){
-        Error(CurToken(), "Tried to assign higher-precision value to lower-precision variable");
+      if (left_type < right_type) {
+        Error(CurToken(), "Tried to assign higher-precision value to "
+                          "lower-precision variable");
       }
       return ASTNode(ASTNode::ASSIGN, "=", std::move(lhs), std::move(rhs));
     }
@@ -158,7 +161,8 @@ private:
       ConsumeToken();
       ASTNode rhs = ParseAnd();
 
-      if (lhs->ReturnType(table) != VarType::INT || rhs.ReturnType(table) != VarType::INT){
+      if (lhs->ReturnType(table) != VarType::INT ||
+          rhs.ReturnType(table) != VarType::INT) {
         Error(CurToken(), "Used non-int value in an or expression");
       }
       lhs = std::make_unique<ASTNode>(
@@ -172,7 +176,8 @@ private:
     while (CurToken().lexeme == "&&") {
       ConsumeToken();
       ASTNode rhs = ParseEquals();
-      if (lhs->ReturnType(table) != VarType::INT || rhs.ReturnType(table) != VarType::INT){
+      if (lhs->ReturnType(table) != VarType::INT ||
+          rhs.ReturnType(table) != VarType::INT) {
         Error(CurToken(), "Used non-int value in an and expression");
       }
       lhs = std::make_unique<ASTNode>(
