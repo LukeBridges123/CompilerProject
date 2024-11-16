@@ -27,4 +27,5 @@ public:
 
   std::string TypeName() const;
   std::string WATType() const;
+  std::string WATOperation(std::string operation, bool is_signed = false) const;
 };

@@ -40,7 +40,7 @@ std::string VarType::TypeName() const {
   default:
     throw std::invalid_argument("Attempt to access unknown type");
   }
-};
+}
 
 std::string VarType::WATType() const {
   switch (id) {
@@ -52,4 +52,12 @@ std::string VarType::WATType() const {
   default:
     throw std::invalid_argument("Attempt to access unknown type");
   }
-};
+}
+
+std::string VarType::WATOperation(std::string operation, bool is_signed) const {
+  std::string inst = WATType() + "." + operation;
+  if (is_signed && id == INT) {
+    inst += "_s";
+  }
+  return inst;
+}

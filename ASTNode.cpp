@@ -96,20 +96,14 @@ WATExpr ASTNode::EmitModule(State &state) const {
 }
 
 std::vector<WATExpr> ASTNode::EmitLiteral(State &symbols) const {
-  std::string valueStr = std::visit(
+  std::string value_str = std::visit(
       [](auto &&value) { return std::format("{}", value); }, value->getValue());
-  return WATExpr("i32.const", std::format("{}", valueStr))
+  return WATExpr(value->getType().WATOperation("const"), value_str)
       .Comment("Literal value")
       .Inline();
 }
 
 std::vector<WATExpr> ASTNode::EmitScope(State &state) const {
-  // push a new scope
-  // run each child node in order
-  // pop scope
-  // for (ASTNode &child : children) {
-  //   child.Emit(state);
-  // }
   std::vector<WATExpr> new_scope{};
   for (ASTNode const &child : children) {
     std::vector<WATExpr> child_exprs = child.Emit(state);
@@ -160,6 +154,7 @@ std::vector<WATExpr> ASTNode::EmitConditional(State &state) const {
 std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
   assert(children.size() >= 1);
   std::vector<WATExpr> left = children.at(0).Emit(state);
+  VarType left_type = children.at(0).ReturnType(state.table);
 
   if (literal == "!") {
     WATExpr cond{"if"};
@@ -175,8 +170,8 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     expr.push_back(cond);
     return expr;
   } else if (literal == "-") {
-    WATExpr expr{"i32.mul"};
-    WATExpr negative_one{"i32.const", "-1"};
+    WATExpr expr{left_type.WATOperation("mul")};
+    WATExpr negative_one{left_type.WATOperation("const"), "-1"};
     expr.AddChildren({negative_one});
     expr.AddChildren(left);
     return expr;
@@ -187,19 +182,22 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
   // remaining operations are binary operations
   assert(children.size() == 2);
   std::vector<WATExpr> right = children.at(1).Emit(state);
+  VarType right_type = children.at(0).ReturnType(state.table);
 
+  // TODO: actual promotion
+  VarType rettype = std::max(left_type, right_type);
   if (literal == "+") {
-    WATExpr expr{"i32.add"};
+    WATExpr expr{rettype.WATOperation("add")};
     expr.AddChildren(left);
     expr.AddChildren(right);
     return expr;
   } else if (literal == "-") {
-    WATExpr expr{"i32.sub"};
+    WATExpr expr{rettype.WATOperation("sub")};
     expr.AddChildren(left);
     expr.AddChildren(right);
     return expr;
   } else if (literal == "*") {
-    WATExpr expr{"i32.mul"};
+    WATExpr expr{rettype.WATOperation("mul")};
     expr.AddChildren(left);
     expr.AddChildren(right);
     return expr;
@@ -210,32 +208,32 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     expr.AddChildren(right);
     return expr;
   } else if (literal == "<") {
-    WATExpr expr{"i32.lt_s"};
+    WATExpr expr{rettype.WATOperation("lt", true)};
     expr.AddChildren(left);
     expr.AddChildren(right);
     return expr;
   } else if (literal == ">") {
-    WATExpr expr{"i32.gt_s"};
+    WATExpr expr{rettype.WATOperation("gt", true)};
     expr.AddChildren(left);
     expr.AddChildren(right);
     return expr;
   } else if (literal == "<=") {
-    WATExpr expr{"i32.le_s"};
+    WATExpr expr{rettype.WATOperation("le", true)};
     expr.AddChildren(left);
     expr.AddChildren(right);
     return expr;
   } else if (literal == ">=") {
-    WATExpr expr{"i32.ge_s"};
+    WATExpr expr{rettype.WATOperation("ge", true)};
     expr.AddChildren(left);
     expr.AddChildren(right);
     return expr;
   } else if (literal == "==") {
-    WATExpr expr{"i32.eq"};
+    WATExpr expr{rettype.WATOperation("eq")};
     expr.AddChildren(left);
     expr.AddChildren(right);
     return expr;
   } else if (literal == "!=") {
-    WATExpr expr{"i32.ne"};
+    WATExpr expr{rettype.WATOperation("ne")};
     expr.AddChildren(left);
     expr.AddChildren(right);
     return expr;
