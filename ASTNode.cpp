@@ -252,11 +252,12 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     return expr;
   } else if (literal == "sqrt") {
     WATExpr sqrt{"f64.sqrt"};
+    sqrt.AddChildren(left);
     if (left_type == VarType::INT) {
       WATExpr convert{"f64.convert_i32_s"};
       sqrt.AddChildren(convert);
     }
-    sqrt.AddChildren(left);
+    
     return sqrt;
   }
 
