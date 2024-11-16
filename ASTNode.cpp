@@ -232,9 +232,40 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
   assert(children.size() == 2);
   std::vector<WATExpr> right = children.at(1).Emit(state);
   VarType right_type = children.at(0).ReturnType(state.table);
-  std::string op_name = LiteralToWATOp(literal);
   VarType rettype = ReturnType(state.table);
   VarType op_type = std::max(left_type, right_type);
+
+  if (literal == "&&"){
+    WATExpr test_first{"i32.eq"};
+    test_first.AddChildren(left);
+    test_first.Child(WATExpr{"i32.const", "0"});
+
+    WATExpr test_second{"i32.ne"};
+    test_second.AddChildren(right);
+    test_second.Child(WATExpr{"i32.const", "0"});
+    WATExpr cond{"if"};
+    cond.Child(WATExpr{"result", "i32"});
+    cond.Child(WATExpr{"then", {}, WATExpr{"i32.const 0"}});
+    cond.Child(WATExpr{"else", {}, test_second});
+    return {test_first, cond};
+  }
+
+  if (literal == "||"){
+    WATExpr test_first{"i32.eq"};
+    test_first.AddChildren(left);
+    test_first.Child(WATExpr{"i32.const", "1"});
+
+    WATExpr test_second{"i32.ne"};
+    test_second.AddChildren(right);
+    test_second.Child(WATExpr{"i32.const", "0"});
+    WATExpr cond{"if"};
+    cond.Child(WATExpr{"result", "i32"});
+    cond.Child(WATExpr{"then", {}, WATExpr{"i32.const 1"}});
+    cond.Child(WATExpr{"else", {}, test_second});
+    return {test_first, cond};
+  }
+
+  std::string op_name = LiteralToWATOp(literal);
   // that second argument is there to duplicate the way that the previous code set "signed" to true for compare ops
   WATExpr expr{op_type.WATOperation(op_name, (literal == "<" || literal == ">" || literal == "<=" || literal == ">="))};
 
