@@ -138,7 +138,8 @@ WATExpr ASTNode::EmitModule(State &state) const {
   return out;
 }
 
-std::vector<WATExpr> ASTNode::EmitLiteral(State &symbols) const {
+std::vector<WATExpr>
+ASTNode::EmitLiteral([[maybe_unused]] State &symbols) const {
   std::string value_str = std::visit(
       [](auto &&value) { return std::format("{}", value); }, value->getValue());
   return WATExpr(value->getType().WATOperation("const"), value_str)
@@ -172,7 +173,8 @@ std::vector<WATExpr> ASTNode::EmitAssign(State &state) const {
   return WATExpr{"local.set", {Variable("var", children[0].var_id)}, rvalue};
 }
 
-std::vector<WATExpr> ASTNode::EmitIdentifier(State &state) const {
+std::vector<WATExpr>
+ASTNode::EmitIdentifier([[maybe_unused]] State &state) const {
   return WATExpr{"local.get", Variable("var", var_id)};
 }
 
@@ -237,7 +239,6 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
   assert(children.size() == 2);
   std::vector<WATExpr> right = children.at(1).Emit(state);
   VarType right_type = children.at(1).ReturnType(state.table);
-  VarType rettype = ReturnType(state.table);
   VarType op_type = std::max(left_type, right_type);
 
   if (literal == "&&") {

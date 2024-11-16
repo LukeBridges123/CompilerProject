@@ -42,7 +42,6 @@ public:
   std::optional<Value> value = std::nullopt;
   size_t var_id{};
   std::string literal{};
-  Token const *token = nullptr; // for error reporting
 
   // ASTNode copies are expensive, so only allow moves
   ASTNode(ASTNode &) = delete;
@@ -53,9 +52,7 @@ public:
 
   template <typename T>
   ASTNode(Type type, T val) : type(type), value(Value(val)){};
-  // ASTNode(Type type, char val);
-  ASTNode(Type type, size_t var_id, Token const *token)
-      : type(type), var_id(var_id), token(token) {};
+  ASTNode(Type type, size_t var_id) : type(type), var_id(var_id) {};
 
   template <typename... Ts>
   ASTNode(Type type, std::string literal, Ts &&...children)

@@ -4,7 +4,6 @@
 #include <string>
 
 #include <utility>
-#include <variant>
 #include <vector>
 
 #include "ASTNode.hpp"
@@ -68,7 +67,7 @@ private:
     Token func_name = ExpectToken(Lexer::ID_ID);
     size_t func_id = table.AddFunction(func_name.lexeme, func_name.line_id);
     FunctionInfo &func_info = table.functions.at(func_id);
-    ASTNode function{ASTNode::FUNCTION, func_id, &func_name};
+    ASTNode function{ASTNode::FUNCTION, func_id};
 
     table.PushScope();
 
@@ -127,8 +126,7 @@ private:
     size_t var_id = table.AddVar(ident.lexeme, var_type, ident.line_id);
 
     ASTNode out = ASTNode{ASTNode::ASSIGN};
-    out.AddChildren(ASTNode(ASTNode::IDENTIFIER, var_id, &ident),
-                    std::move(expr));
+    out.AddChildren(ASTNode(ASTNode::IDENTIFIER, var_id), std::move(expr));
 
     return out;
   }
@@ -313,9 +311,9 @@ private:
     case Lexer::ID_CHAR:
       return CheckTypeCast(ASTNode(ASTNode::LITERAL, ConsumeToken().lexeme[1]));
     case Lexer::ID_ID:
-      return CheckTypeCast(ASTNode(
-          ASTNode::IDENTIFIER,
-          table.FindVar(ConsumeToken().lexeme, current.line_id), &current));
+      return CheckTypeCast(
+          ASTNode(ASTNode::IDENTIFIER,
+                  table.FindVar(ConsumeToken().lexeme, current.line_id)));
     case Lexer::ID_OPEN_PARENTHESIS: {
       ExpectToken(Lexer::ID_OPEN_PARENTHESIS);
       ASTNode subexpression = ParseExpr();
