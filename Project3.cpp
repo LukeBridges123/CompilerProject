@@ -293,7 +293,7 @@ private:
     }
 
     if (token.lexeme == ":char") {
-      ASTNode out{ASTNode::CAST_DOUBLE};
+      ASTNode out{ASTNode::CAST_CHAR};
       out.AddChildren(std::move(node));
       return out;
     }
