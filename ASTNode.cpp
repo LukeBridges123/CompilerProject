@@ -125,7 +125,7 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
   }
   case CAST_INT:
     assert(children.size() == 1);
-    if (1 || children.at(0).ReturnType(state.table) == VarType::DOUBLE){
+    if (children.at(0).ReturnType(state.table) == VarType::DOUBLE){
       std::vector<WATExpr> ret = children.at(0).Emit(state);
       ret.push_back(WATExpr{"i32.trunc_f64_s"});
       return ret;
@@ -192,7 +192,11 @@ std::vector<WATExpr> ASTNode::EmitAssign(State &state) const {
   // this should produce some code which, when run, leaves the
   // rvalue on the stack
   std::vector<WATExpr> rvalue = children.at(1).Emit(state);
-
+  VarType left_type = children.at(0).ReturnType(state.table);
+  VarType right_type = children.at(1).ReturnType(state.table);
+  if (left_type == VarType::DOUBLE && right_type == VarType::INT){
+    rvalue.push_back(WATExpr{"f64.convert_i32_s"});
+  }
   return WATExpr{"local.set", {Variable("var", children[0].var_id)}, rvalue};
 }
 
@@ -253,9 +257,9 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
   // remaining operations are binary operations
   assert(children.size() == 2);
   std::vector<WATExpr> right = children.at(1).Emit(state);
-  VarType right_type = children.at(0).ReturnType(state.table);
+  VarType right_type = children.at(1).ReturnType(state.table);
   VarType rettype = ReturnType(state.table);
-  VarType op_type = (literal == "/") ? left_type : std::max(left_type, right_type);
+  VarType op_type = std::max(left_type, right_type);
 
   if (literal == "&&"){
     WATExpr test_first{"i32.eq"};
