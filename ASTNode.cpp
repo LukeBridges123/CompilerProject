@@ -233,7 +233,7 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
   std::vector<WATExpr> right = children.at(1).Emit(state);
   VarType right_type = children.at(0).ReturnType(state.table);
   VarType rettype = ReturnType(state.table);
-  VarType op_type = std::max(left_type, right_type);
+  VarType op_type = (literal == "/") ? left_type : std::max(left_type, right_type);
 
   if (literal == "&&"){
     WATExpr test_first{"i32.eq"};
@@ -267,7 +267,7 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
 
   std::string op_name = LiteralToWATOp(literal);
   // that second argument is there to duplicate the way that the previous code set "signed" to true for compare ops
-  WATExpr expr{op_type.WATOperation(op_name, (literal == "<" || literal == ">" || literal == "<=" || literal == ">="))};
+  WATExpr expr{op_type.WATOperation(op_name, (literal == "<" || literal == ">" || literal == "<=" || literal == ">=" || literal == "/"))};
 
 
   expr.AddChildren(left);
