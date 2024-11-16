@@ -10,6 +10,11 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
   switch (type) {
   case LITERAL:
     return value.value().getType();
+  case ASSIGN:
+    assert(children.size() == 2);
+    // TODO: once assignment chaining is implemented, should be this:
+    // return children.at(1).ReturnType(table);
+    return VarType::NONE;
   case OPERATION:
     // logical/comparison operators + modulus always return an int
     if (literal == "!" || literal == "||" || literal == "&&" ||
@@ -63,6 +68,7 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
   case BREAK:
     return VarType::NONE;
   default:
+    assert(false);
     return VarType::UNKNOWN;
   }
 }
@@ -184,8 +190,7 @@ std::vector<WATExpr> ASTNode::EmitConditional(State &state) const {
   WATExpr if_then_else{"if"};
 
   VarType rettype = ReturnType(state.table);
-  // TODO: remove the "unknown" check here
-  if (rettype != VarType::NONE && rettype != VarType::UNKNOWN) {
+  if (rettype != VarType::NONE) {
     if_then_else.Child("result", rettype.WATType()).Inline();
   }
 
