@@ -60,6 +60,35 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
   }
 }
 
+//could probably just replace this with a map tbh
+std::string LiteralToWATOp(std::string const & literal) {
+  if (literal == "+"){
+    return "add";
+  } else if (literal == "*") {
+    return "mul";
+  } else if (literal == "-") {
+    return "sub";
+  } else if (literal == "/") {
+    return "div";
+  } else if (literal == "%") {
+    return "rem_u";
+  } else if (literal == "<") {
+    return "lt";
+  } else if (literal == ">") {
+    return "gt";
+  } else if (literal == "<=") {
+    return "le";
+  } else if (literal == ">=") {
+    return "ge";
+  } else if (literal == "=="){
+    return "eq";
+  } else if (literal == "!=") {
+    return "ne";
+  } else {
+    ErrorNoLine("Invalid operation passed to LiteralToWATOp");
+  }
+}
+
 std::vector<WATExpr> ASTNode::Emit(State &state) const {
   switch (type) {
   case SCOPE:
@@ -203,9 +232,23 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
   assert(children.size() == 2);
   std::vector<WATExpr> right = children.at(1).Emit(state);
   VarType right_type = children.at(0).ReturnType(state.table);
+  std::string op_name = LiteralToWATOp(literal);
+  VarType rettype = ReturnType(state.table);
+  VarType op_type = std::max(left_type, right_type);
+  // that second argument is there to duplicate the way that the previous code set "signed" to true for compare ops
+  WATExpr expr{op_type.WATOperation(op_name, (literal == "<" || literal == ">" || literal == "<=" || literal == ">="))};
 
-  // TODO: actual promotion
-  VarType rettype = std::max(left_type, right_type);
+
+  expr.AddChildren(left);
+  if (left_type == VarType::INT && right_type == VarType::DOUBLE){
+    expr.AddChildren(WATExpr{right_type.WATOperation("convert_i32_s")});
+  }
+  expr.AddChildren(right);
+  if (right_type == VarType::INT && left_type == VarType::DOUBLE){
+    expr.AddChildren(WATExpr{left_type.WATOperation("convert_i32_s")});
+  }
+  return expr;
+  /*
   if (literal == "+") {
     WATExpr expr{rettype.WATOperation("add")};
     expr.AddChildren(left);
@@ -258,6 +301,7 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     expr.AddChildren(right);
     return expr;
   }
+  */
   ErrorNoLine("Not implemented (emit operation fallthrough)");
 }
 
