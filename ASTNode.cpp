@@ -18,14 +18,14 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
           return VarType::INT;
         }
     // sqrt always returns a double; easiest to have / do the same thing?
-    if (literal == "sqrt" || literal == "/") {
+    if (literal == "sqrt") {
       return VarType::DOUBLE;
     }
     if (literal == "-" && children.size() == 1){
       return children.at(0).ReturnType(table);
     }
     // find type based on precision
-    if (literal == "+" || literal == "-" || literal == "*"){
+    if (literal == "+" || literal == "-" || literal == "*" || literal == "/"){
       assert(children.size() == 2);
       VarType left_type = children.at(0).ReturnType(table);
       VarType right_type = children.at(1).ReturnType(table);
