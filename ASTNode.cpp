@@ -170,13 +170,44 @@ std::vector<WATExpr> ASTNode::EmitAssign(State &state) const {
 
   // this should produce some code which, when run, leaves the
   // rvalue on the stack
-  std::vector<WATExpr> rvalue = children.at(1).Emit(state);
+  std::vector<WATExpr> rvalue;
+
+  if (children.at(1).type == ASSIGN)
+  {
+    rvalue = children.at(1).EmitChainAssign(state);
+  }else {
+    rvalue = children.at(1).Emit(state);
+  } 
+  
   VarType left_type = children.at(0).ReturnType(state.table);
   VarType right_type = children.at(1).ReturnType(state.table);
   if (left_type == VarType::DOUBLE && right_type == VarType::INT) {
     rvalue.push_back(WATExpr{"f64.convert_i32_s"});
   }
   return WATExpr{"local.set", {Variable("var", children[0].var_id)}, rvalue};
+}
+
+std::vector<WATExpr> ASTNode::EmitChainAssign(State &state) const {
+  assert(children.size() == 2);
+  assert(children[0].type == IDENTIFIER);
+
+  // this should produce some code which, when run, leaves the
+  // rvalue on the stack
+  std::vector<WATExpr> rvalue;
+
+  if (children.at(1).type == ASSIGN)
+  {
+    rvalue = children.at(1).EmitChainAssign(state);
+  }else {
+    rvalue = children.at(1).Emit(state);
+  }
+
+  VarType left_type = children.at(0).ReturnType(state.table);
+  VarType right_type = children.at(1).ReturnType(state.table);
+  if (left_type == VarType::DOUBLE && right_type == VarType::INT) {
+    rvalue.push_back(WATExpr{"f64.convert_i32_s"});
+  }
+  return WATExpr{"local.tee", {Variable("var", children[0].var_id)}, rvalue};
 }
 
 std::vector<WATExpr>
@@ -359,9 +390,17 @@ std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {
         .Comment("Declare " + var.type_var.TypeName() + " " + var.name);
   }
 
+  // bool is_return = false;
   for (ASTNode const &child : children) {
+    // if (child.type == RETURN) {
+    //   is_return = true;
+    // }
     function.AddChildren(child.Emit(state));
   }
+
+  // if (is_return == false) {
+  //   ErrorNoLine("The function" + info.name +" does not end in a return statement!!");
+  // }
 
   return function;
 }
