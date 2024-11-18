@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <format>
 #include <ranges>
 
@@ -70,6 +71,25 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
   default:
     assert(false);
     return VarType::UNKNOWN;
+  }
+}
+
+bool ASTNode::HasReturn(State const &state) const {
+  switch (type) {
+  case RETURN:
+    return true;
+  case CONDITIONAL:
+    // both true and false branches must have a return
+    return children.size() == 3 && children.at(1).HasReturn(state) &&
+           children.at(2).HasReturn(state);
+  case SCOPE:
+  case FUNCTION:
+    // if any child has a return, then we have a return
+    return std::ranges::any_of(children, [state](ASTNode const &child) {
+      return child.HasReturn(state);
+    });
+  default:
+    return false;
   }
 }
 
@@ -306,8 +326,8 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
   }
 
   std::string op_name = LITERAL_TO_WAT.at(literal);
-  // that second argument is there to duplicate the way that the previous code
-  // set "signed" to true for compare ops
+  // that second argument is there to duplicate the way that the previous
+  // code set "signed" to true for compare ops
   WATExpr expr{op_type.WATOperation(
       op_name, (literal == "<" || literal == ">" || literal == "<=" ||
                 literal == ">=" || literal == "/"))};
@@ -367,6 +387,12 @@ std::vector<WATExpr> ASTNode::EmitBreak(State &state) const {
 
 std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {
   FunctionInfo const &info = state.table.functions.at(var_id);
+
+  if (!HasReturn(state)) {
+    ErrorNoLine("Function ", info.name,
+                " does not have a return statement in all control flow paths");
+  }
+
   WATExpr function{"func", Variable(info.name)};
   function.format.newline = true;
 
@@ -388,18 +414,9 @@ std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {
         .Comment("Declare " + var.type_var.TypeName() + " " + var.name);
   }
 
-  // bool is_return = false;
   for (ASTNode const &child : children) {
-    // if (child.type == RETURN) {
-    //   is_return = true;
-    // }
     function.AddChildren(child.Emit(state));
   }
-
-  // if (is_return == false) {
-  //   ErrorNoLine("The function" + info.name +" does not end in a return
-  //   statement!!");
-  // }
 
   return function;
 }

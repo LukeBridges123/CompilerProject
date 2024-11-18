@@ -38,7 +38,6 @@ public:
     BREAK
   };
   Type const type;
-  // double value{};
   std::optional<Value> value = std::nullopt;
   size_t var_id{};
   std::string literal{};
@@ -91,6 +90,7 @@ public:
   WATExpr EmitModule(State &state) const;
 
   VarType ReturnType(SymbolTable const &table) const;
+  bool HasReturn(State const &state) const;
 
 private:
   std::vector<ASTNode> children{};
