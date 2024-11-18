@@ -172,13 +172,12 @@ std::vector<WATExpr> ASTNode::EmitAssign(State &state) const {
   // rvalue on the stack
   std::vector<WATExpr> rvalue;
 
-  if (children.at(1).type == ASSIGN)
-  {
+  if (children.at(1).type == ASSIGN) {
     rvalue = children.at(1).EmitChainAssign(state);
-  }else {
+  } else {
     rvalue = children.at(1).Emit(state);
-  } 
-  
+  }
+
   VarType left_type = children.at(0).ReturnType(state.table);
   VarType right_type = children.at(1).ReturnType(state.table);
   if (left_type == VarType::DOUBLE && right_type == VarType::INT) {
@@ -195,10 +194,9 @@ std::vector<WATExpr> ASTNode::EmitChainAssign(State &state) const {
   // rvalue on the stack
   std::vector<WATExpr> rvalue;
 
-  if (children.at(1).type == ASSIGN)
-  {
+  if (children.at(1).type == ASSIGN) {
     rvalue = children.at(1).EmitChainAssign(state);
-  }else {
+  } else {
     rvalue = children.at(1).Emit(state);
   }
 
@@ -399,7 +397,8 @@ std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {
   }
 
   // if (is_return == false) {
-  //   ErrorNoLine("The function" + info.name +" does not end in a return statement!!");
+  //   ErrorNoLine("The function" + info.name +" does not end in a return
+  //   statement!!");
   // }
 
   return function;
