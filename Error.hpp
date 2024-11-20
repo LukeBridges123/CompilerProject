@@ -40,6 +40,13 @@ template <typename... Ts> [[noreturn]] void ErrorNoLine(Ts... message) {
   exit(1);
 }
 
+template <typename... Ts> [[noreturn]] void WATParseError(Ts... message) {
+  std::cerr << "ERROR while parsing internal WAT: ";
+  (std::cerr << ... << message);
+  std::cerr << std::endl;
+  exit(1);
+}
+
 void ErrorUnsupportedUnary(Token const &token, VarType const &type);
 void ErrorUnsupportedBinary(Token const &token, VarType const &lhs,
                             VarType const &rhs);

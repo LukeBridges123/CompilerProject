@@ -81,3 +81,13 @@ public:
   WATWriter(std::ostream &out) : out(out) {};
   void Write(WATExpr const &expr);
 };
+
+class WATParser {
+private:
+  std::istream &in;
+
+public:
+  WATParser(std::istream &in) : in(in) {};
+  WATExpr ParseExpr();
+  std::vector<WATExpr> Parse();
+};
