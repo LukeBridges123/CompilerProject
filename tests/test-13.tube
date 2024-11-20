@@ -1,2 +1,5 @@
-// Simple math with doubles.
-function AddD (double x, double y) : double { return x + y; }
+// Safe indexing (a test of the size function)
+function At(string str, int index) : char {
+  if (index < 0 || index >= size(str)) return '?';
+  return str[index];
+}

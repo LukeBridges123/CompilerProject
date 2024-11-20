@@ -1,2 +1,4 @@
-// Functions must have a 'return' statement.
-function AddError(int x, int y) : int { x + y; }
+// Cannot add a string to an int.
+function ErrorFun(int x) : int {
+  return x + "ahhh!";
+}

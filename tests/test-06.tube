@@ -1,5 +1,2 @@
-// Test if statements.
-function Absolute(int x) : int {
-  if (x < 0) x = -x;
-  return x;
-}
+// Appending string literals.
+function HelloPlus() : string { return "Hello" + " World!"; }

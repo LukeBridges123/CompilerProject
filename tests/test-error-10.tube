@@ -1,5 +1,4 @@
-// An char variable cannot be set to a floating point value.
-function TypeError(double val) : char {
-  char c = val;
-  return c;
+// Cannot run size() with no arguments.
+function ErrorFun() : int {
+  return size();
 }

@@ -1,2 +1,8 @@
-// Test the simplest I/O function, passing a value through.
-function Echo(int x) : int { return x; }
+// Test calling the same function more than once.
+function Inc(int val) : int {
+  return val + 1;
+}
+function Inc2(int val) : int {
+  int part = Inc(val);
+  return Inc(part);
+}

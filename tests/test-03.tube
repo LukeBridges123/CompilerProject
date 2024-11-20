@@ -1,4 +1,7 @@
-// Slightly less trivial function, add two values.
-function Add (int val1, int val2) : int {
-  return val1 + val2;
+// Test calling functions in a nested manner.
+function Mult(double val1, double val2) : double {
+  return val1 * val2;
+}
+function Mult4(double val1, double val2, double val3, double val4) : double {
+  return Mult( Mult(val1, val2), Mult(val3, val4) );
 }

@@ -1,6 +1,7 @@
-// Math on doubles that returns an int.
-function CompareD(double x, double y) : int {
-  if (x < y) return -1;
-  else if (x > y) return 1;
-  return 0; // They are equal!
+// Safe setting of a string.
+function SetAt(string str, int index, char c) : string {
+  if (index >= 0 && index < size(str)) {
+    str[index] = c;
+  }
+  return str;
 }

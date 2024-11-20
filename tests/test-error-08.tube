@@ -1,4 +1,4 @@
-// All paths through a function must end up with a return.
-function FlowError(int x) : int {
-  if (x < 10) return 10;
+// Index values must be type int.
+function ErrorFun(string x) : char {
+  return x["here"];
 }

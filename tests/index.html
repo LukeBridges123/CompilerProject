@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WASM Tester</title>
+  <title>WASM Tester for Project 4 Tests</title>
   <style>
     body { font-family: Arial, sans-serif; }
     .test { margin-bottom: 20px; }
@@ -16,7 +16,11 @@
   </style>
 </head>
 <body>
-  <h1>WASM Test Runner</h1>
+  <h1>WASM Test Runner for Project 4</h1>
+
+  <p>
+  <a href="P3-tester.html">Click here to check tests from Project 3.</a>
+  </p>
 
   <table id="results-table">
     <tr style="height: 30px;"><td style="background-color: #ddddff;" colspan="6">
@@ -34,132 +38,124 @@
   </table>
 
   <script>
+    // Utility to convert memory offset into a string
+    function readStringFromMemory(offset, memoryBuffer) {
+      if (!memoryBuffer) {
+        throw new Error("Cannot read output; 'memory' not exported from WebAssembly module.");
+      }
+
+      let resultString = '';
+      for (let i = offset; memoryBuffer[i] !== 0; i++) {
+        resultString += String.fromCharCode(memoryBuffer[i]);
+      }
+      return resultString;
+    }
+
+    // Function to allocate memory and write the string, returning the offset used.
+    let write_offset = 50000; // (near end of memory...)
+    function writeStringToMemory(string, memoryBuffer) {
+      if (!memoryBuffer) {
+        throw new Error("Cannot send argument; 'memory' not exported from WebAssembly module.");
+      }
+
+      // Write the string into memory as null-terminated
+      const start_offset = write_offset;
+      for (let i = 0; i < string.length; i++) {
+        memoryBuffer[write_offset + i] = string.charCodeAt(i);
+      }
+      memoryBuffer[start_offset + string.length] = 0; // Null terminator
+      write_offset = start_offset + string.length + 1;
+
+      return start_offset;
+    }
+
+    function asLiteral(in_value) {
+      let out_value = in_value;
+      // If the in_value is a string of char, add appropriate quotes.
+      if (typeof in_value === "string") {
+        if (in_value.length == 1) { // We are expecting a char.
+          out_value = "'" + `${in_value}` + "'";
+        } else { // We are expecting a full string.
+          out_value = '"' + `${in_value}` + '"';
+        }
+      }
+      return out_value;
+    }
+
     // Define the expected outputs for the test cases
     const testCases = [
-      { id: 1, fun_name: "Get42", args: [], expected: 42 },
+      { id: 1, fun_name: "Add",  args: [4, 11], expected: 15 },
+      { id: 1, fun_name: "Add3", args: [4, 11, 100], expected: 115 },
+      { id: 1, fun_name: "Add3", args: [32, 64, 127], expected: 223 },
 
-      { id: 2, fun_name: "Echo", args: [3], expected: 3 },
-      { id: 2, fun_name: "Echo", args: [1001], expected: 1001 },
+      { id: 2, fun_name: "Inc", args: [3], expected: 4 },
+      { id: 2, fun_name: "Inc2", args: [10], expected: 12 },
 
-      { id: 3, fun_name: "Add", args: [2, 3], expected: 5 },
-      { id: 3, fun_name: "Add", args: [606, 1000], expected: 1606 },
+      { id: 3, fun_name: "Mult", args: [2, 3], expected: 6 },
+      { id: 3, fun_name: "Mult", args: [5, 1000], expected: 5000 },
+      { id: 3, fun_name: "Mult4", args: [2, 3, 4, 5], expected: 120 },
+      { id: 3, fun_name: "Mult4", args: [1.5, 0.5, 20, 0.5], expected: 7.5 },      
 
-      { id: 4, fun_name: "Multiply", args: [2, 3], expected: 6 },
-      { id: 4, fun_name: "Multiply", args: [33, 20], expected: 660 },
+      { id: 4, fun_name: "Get3", args: [], expected: 3 },
 
-      { id: 5, fun_name: "TestEven", args: [7], expected: 0 },
-      { id: 5, fun_name: "TestEven", args: [999], expected: 0 },
-      { id: 5, fun_name: "TestEven", args: [1002], expected: 1 },
+      { id: 5, fun_name: "Hello", args: [], expected: "Hello World!" },
 
-      { id: 6, fun_name: "Absolute", args: [-12], expected: 12 },
-      { id: 6, fun_name: "Absolute", args: [12], expected: 12 },
-      { id: 6, fun_name: "Absolute", args: [0], expected: 0 },
+      { id: 6, fun_name: "HelloPlus", args: [], expected: "Hello World!" },
 
-      { id: 7, fun_name: "Max", args: [10, 20], expected: 20 },
-      { id: 7, fun_name: "Max", args: [0, 404], expected: 404 },
-      { id: 7, fun_name: "Max", args: [-18, -12], expected: -12 },
+      { id: 7, fun_name: "HelloPlusPlus", args: [], expected: "Hello World!" },
 
-      { id: 8, fun_name: "Min", args: [10, 20], expected: 10 },
-      { id: 8, fun_name: "Min", args: [0, 404], expected: 0 },
-      { id: 8, fun_name: "Min", args: [-18, -12], expected: -18 },
+      { id: 8, fun_name: "One", args: [], expected: "ONE" },
 
-      { id: 9, fun_name: "Max3", args: [10, 20, 15], expected: 20 },
-      { id: 9, fun_name: "Max3", args: [0, 404, 2024], expected: 2024 },
-      { id: 9, fun_name: "Max3", args: [-1, -18, -12], expected: -1 },
+      { id: 9, fun_name: "TwentyOne", args: [], expected: "TWENTYone" },
 
-      { id: 10, fun_name: "Factorial", args: [1], expected: 1 },
-      { id: 10, fun_name: "Factorial", args: [2], expected: 2 },
-      { id: 10, fun_name: "Factorial", args: [3], expected: 6 },
-      { id: 10, fun_name: "Factorial", args: [8], expected: 40320 },
+      { id: 10, fun_name: "Bracketize", args: ["abc"], expected: "[abc]" },
+      { id: 10, fun_name: "Bracketize", args: ["INDEX"], expected: "[INDEX]" },
+      { id: 10, fun_name: "Bracketize", args: ["xyz123"], expected: "[xyz123]" },
 
-      { id: 11, fun_name: "GCD", args: [2,9], expected: 1 },
-      { id: 11, fun_name: "GCD", args: [21,33], expected: 3 },
-      { id: 11, fun_name: "GCD", args: [21,91], expected: 7 },
-      { id: 11, fun_name: "GCD", args: [99,81], expected: 9 },
+      { id: 11, fun_name: "LetterG", args: [], expected: "G" },
 
-      { id: 12, fun_name: "EchoD", args: [3.125], expected: 3.125 },
-      { id: 12, fun_name: "EchoD", args: [10.25], expected: 10.25 },
+      { id: 12, fun_name: "ToLetter", args: [0], expected: "A" },
+      { id: 12, fun_name: "ToLetter", args: [9], expected: "J" },
+      { id: 12, fun_name: "ToLetter", args: [24], expected: "Y" },
+      { id: 12, fun_name: "ToLetter", args: [30], expected: "?" },
+      { id: 12, fun_name: "ToLetter", args: [-3], expected: "?" },
 
-      { id: 13, fun_name: "AddD", args: [3.5, 2.25], expected: 5.75 },
-      { id: 13, fun_name: "AddD", args: [9.125, 10], expected: 19.125 },
+      { id: 13, fun_name: "At", args: ["you", 2], expected: "u" },
+      { id: 13, fun_name: "At", args: ["ThisIsATest", 6], expected: "A" },
+      { id: 13, fun_name: "At", args: ["youtoo", 10], expected: "?" },
+      { id: 13, fun_name: "At", args: ["NotLongEnough", 13], expected: "?" },
 
-      { id: 14, fun_name: "CompareD", args: [3.5, 3], expected: 1 },
-      { id: 14, fun_name: "CompareD", args: [3.5, 4], expected: -1 },
-      { id: 14, fun_name: "CompareD", args: [3.5, 3.5], expected: 0 },
+      { id: 14, fun_name: "SetAt", args: ["abc", 1, "B"], expected: "aBc" },
+      { id: 14, fun_name: "SetAt", args: ["acgt", 3, "u"], expected: "acgu" },
+      { id: 14, fun_name: "SetAt", args: ["dough", 0, "t"], expected: "tough" },
 
-      { id: 15, fun_name: "CalcHypotenuse", args: [3, 4], expected: 5 },
-      { id: 15, fun_name: "CalcHypotenuse", args: [1.5, 2], expected: 2.5 },
-      { id: 15, fun_name: "CalcHypotenuse", args: [5, 12], expected: 13 },
+      { id: 15, fun_name: "ToUpperL", args: ['a'], expected: "A" },
+      { id: 15, fun_name: "ToUpperL", args: ['C'], expected: "C" },
+      { id: 15, fun_name: "ToUpperL", args: ['*'], expected: "*" },
+      { id: 15, fun_name: "ToUpper", args: ["lower"], expected: "LOWER" },
+      { id: 15, fun_name: "ToUpper", args: ["UPPER"], expected: "UPPER" },
+      { id: 15, fun_name: "ToUpper", args: ["MixEd"], expected: "MIXED" },
 
-      { id: 16, fun_name: "EchoC", args: ['a'], expected: 'a' },
-      { id: 16, fun_name: "EchoC", args: ['$'], expected: '$' },
-      { id: 16, fun_name: "EchoC", args: ['✋'], expected: '✋' },
+      { id: 16, fun_name: "MergeChars", args: ['a', 'x'], expected: "ax" },
+      { id: 16, fun_name: "MergeChars", args: [':', ')'], expected: ":)" },
 
-      { id: 17, fun_name: "IsUpper", args: ['a'], expected: 0 },
-      { id: 17, fun_name: "IsUpper", args: ['A'], expected: 1 },
-      { id: 17, fun_name: "IsUpper", args: ['@'], expected: 0 },
+      { id: 17, fun_name: "AddPadding", args: ["OOO", 5, "x"], expected: "OOOxx" },
+      { id: 17, fun_name: "AddPadding", args: ["TooLong", 5, "&"], expected: "TooLong" },
+      { id: 17, fun_name: "AddPadding", args: ["padlots", 20, "*"], expected: "padlots*************" },
 
-      { id: 18, fun_name: "ToUpper", args: ['a'], expected: 'A' },
-      { id: 18, fun_name: "ToUpper", args: ['A'], expected: 'A' },
-      { id: 18, fun_name: "ToUpper", args: ['@'], expected: '@' },
+      { id: 18, fun_name: "AddPadding2", args: ["OOO", 5, "x"], expected: "OOOxx" },
+      { id: 18, fun_name: "AddPadding2", args: ["TooLong", 5, "&"], expected: "TooLong" },
+      { id: 18, fun_name: "AddPadding2", args: ["padlots", 20, "*"], expected: "padlots*************" },
 
-      { id: 19, fun_name: "Floor", args: [11.11], expected: 11.0 },
-      { id: 19, fun_name: "Floor", args: [99.99], expected: 99.0 },
-      { id: 19, fun_name: "Floor", args: [100.0], expected: 100.0 },
+      { id: 19, fun_name: "String2Int", args: ["47"], expected: 47 },
+      { id: 19, fun_name: "String2Int", args: ["12345987"], expected: 12345987 },
+      { id: 19, fun_name: "String2Int", args: ["-100"], expected: -100 },
 
-      { id: 20, fun_name: "IsPrime", args: [7], expected: 1 },
-      { id: 20, fun_name: "IsPrime", args: [101010], expected: 0 },
-      { id: 20, fun_name: "IsPrime", args: [100003], expected: 1 },
-
-      { id: 21, fun_name: "Collatz", args: [10], expected: 6 },
-      { id: 21, fun_name: "Collatz", args: [100], expected: 25 },
-      { id: 21, fun_name: "Collatz", args: [1000], expected: 111 },
-
-      { id: 22, fun_name: "Fibonacci", args: [1], expected: 1 },
-      { id: 22, fun_name: "Fibonacci", args: [3], expected: 2 },
-      { id: 22, fun_name: "Fibonacci", args: [8], expected: 21 },
-      { id: 22, fun_name: "Fibonacci", args: [30], expected: 832040 },
-
-      { id: 23, fun_name: "Plus1", args: [3], expected: 4 },
-      { id: 23, fun_name: "PlusOneHalf", args: [4], expected: 4.5 },
-      { id: 23, fun_name: "PlusOneHalf", args: [4.5], expected: 5.0 },
-      { id: 23, fun_name: "HalfAgain", args: [5.0], expected: 7.5 },
-      { id: 23, fun_name: "HalfAgain", args: [7.5], expected: 11.25 },
-
-      { id: 24, fun_name: "CountDivSeven", args: [1.5, 5.5], expected: 0 },
-      { id: 24, fun_name: "CountDivSeven", args: [6.5, 7.5], expected: 1 },
-      { id: 24, fun_name: "CountDivSeven", args: [7.123, 100.123], expected: 13 },
-
-      // Add more test cases as needed
-      { id: 25, fun_name: "FindNextMult5Not10", args: [1], expected: 5 },
-      { id: 25, fun_name: "FindNextMult5Not10", args: [5], expected: 15 },
-      { id: 25, fun_name: "FindNextMult5Not10", args: [108], expected: 115 },
-
-      { id: 26, fun_name: "FindPrime", args: [2], expected: 2 },
-      { id: 26, fun_name: "FindPrime", args: [10], expected: 11 },
-      { id: 26, fun_name: "FindPrime", args: [24], expected: 29 },
-
-      { id: 27, fun_name: "Logish", args: [1.5], expected: 0 },
-      { id: 27, fun_name: "Logish", args: [10.0], expected: 3 },
-      { id: 27, fun_name: "Logish", args: [42.25], expected: 5 },
-
-      { id: 28, fun_name: "AnyOf", args: [0,0,0], expected: 0 },
-      { id: 28, fun_name: "AnyOf", args: [0,0,22], expected: 1 },
-      { id: 28, fun_name: "AnyOf", args: [-6,0,-1], expected: 1 },
-      { id: 28, fun_name: "AnyOf", args: [4,5,6], expected: 1 },
-
-      { id: 29, fun_name: "ExactlyTwo", args: [0,0,0], expected: 0 },
-      { id: 29, fun_name: "ExactlyTwo", args: [0,0,22], expected: 0 },
-      { id: 29, fun_name: "ExactlyTwo", args: [-6,0,-1], expected: 1 },
-      { id: 29, fun_name: "ExactlyTwo", args: [100,101,0], expected: 1 },
-      { id: 29, fun_name: "ExactlyTwo", args: [4,5,6], expected: 0 },
-
-      { id: 30, fun_name: "Triple", args: [8.0], expected: 24.0 },
-      { id: 30, fun_name: "Triple", args: [1.5], expected: 4.5 },
-      { id: 30, fun_name: "Triple", args: [10.125], expected: 30.375 },
-      
+      { id: 20, fun_name: "Int2String", args: [47], expected: "47" },
+      { id: 20, fun_name: "Int2String", args: [12345987], expected: "12345987" },
+      { id: 20, fun_name: "Int2String", args: [-100], expected: "-100" },
     ];
-
+    
     // Summary info:
     var test_count = testCases.length;
     var pass_count = 0;
@@ -193,24 +189,55 @@
         const wasmBuffer = await response.arrayBuffer();
         const wasmModule = await WebAssembly.instantiate(wasmBuffer);
 
+        // Check if memory exists and define memoryBuffer accordingly
+        const memoryBuffer = wasmModule.instance.exports.memory 
+            ? new Uint8Array(wasmModule.instance.exports.memory.buffer) 
+            : undefined;
+
+        // BELOW, we need to convert strings and chars to WebAssembly.  Since JavaScript doesn't treat
+        // these differently, we are going to act like any one-character string is just a char and pass
+        // it by its value.
+
         // Call the specific function with the correct number of arguments using apply()
-        let use_args = Array.from(test.args);
-        use_args.forEach((test, index) => {
-          if (typeof test === "string") {
-            use_args[index] = test.charCodeAt(0);  // Modify the array directly
+        let use_args = Array.from(test.args);  // Load in the arguments for this test.
+        let arg_html = "";                   // Outputting args for user.
+        use_args.forEach((arg, index) => {     // Convert strings and chars to something WASM understands.
+          if (index > 0) arg_html += ", ";
+          arg_html += asLiteral(arg);
+          if (typeof arg === "string") {
+            if (arg.length == 1) { // We are inputting a char.
+              use_args[index] = arg.charCodeAt(0);
+            } else {
+              use_args[index] = writeStringToMemory(arg, memoryBuffer);
+            }
           }
         });
+
+        // Call the function to test and store the result.
         let result = wasmModule.instance.exports[test.fun_name].apply(null, use_args);
-        if (typeof test.expected === "string") result = String.fromCharCode(result);
+        let result_output = result;
+
+        // If the output is expected to be a string, read it from memory.
+        if (typeof test.expected === "string") {
+          if (test.expected.length == 1) { // We are expecting a char.
+            result = String.fromCharCode(result);
+            result_output = "'" + result + "'";
+          } else { // We are expecting a full string.
+            result = readStringFromMemory(result, memoryBuffer);
+            result_output = '"' + result + '"';
+          }
+        }
+
+        // Update the table with results.
         let status_cell = table_row.cells[2];
         let input_cell = table_row.insertCell(3);
         let output_cell = table_row.insertCell(4);
         let expected_cell = table_row.insertCell(5);
 
         input_cell.colSpan = 1;
-        input_cell.textContent = `${test.args}`;
-        output_cell.textContent = `${result}`;
-        expected_cell.textContent = `${test.expected}`
+        input_cell.textContent = arg_html; // `${test.args}`;
+        output_cell.textContent = `${result_output}`;
+        expected_cell.textContent = asLiteral(test.expected);
 
         // Check the result against the expected output
         if (result === test.expected) {

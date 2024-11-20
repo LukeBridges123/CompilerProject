@@ -1,2 +1,7 @@
-// Function parameters must have a type.
-function Error1(x) : int { return x; }
+// Cannot call a function too few args.
+function Add(int val1, int val2) : int {
+  return val1 + val2;
+}
+function ErrorFun() : int {
+  return Add(); // Must have args!
+}

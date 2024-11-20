@@ -1,5 +1,2 @@
-// Test multiple returns in if and else
-function Max(int v1, int v2) : int {
-  if (v1 > v2) return v1;
-  else return v2;
-}
+// Combining string literals and char literals.
+function HelloPlusPlus() : string { return "Hello" + ' ' + "World!"; }

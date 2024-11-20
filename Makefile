@@ -1,5 +1,5 @@
 # Project-specific settings
-PROJECT := Project3
+PROJECT := Project4
 
 # Identify compiler to use
 CXX := c++

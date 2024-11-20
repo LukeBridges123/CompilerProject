@@ -1,5 +1,4 @@
-// An int variable cannot be set to a floating point value.
-function TypeError(double val) : int {
-  int x = val;
-  return x;
+// Cannot run size() on a non-string type.
+function ErrorFun(int x) : int {
+  return size(x);
 }
