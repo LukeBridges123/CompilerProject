@@ -160,12 +160,18 @@ WATExpr ASTNode::EmitModule(State &state) const {
   std::vector<WATExpr> internal_funcs = parser.Parse();
   bool injected = false;
 
+  out.Child("memory", Variable("memory"), "1");
+  WATExpr &global = out.Child("global", Variable("_free")).Newline();
+  global.Child("mut", "i32").Inline();
+  global.Child("i32.const", "0").Inline();
+
   for (ASTNode const &child : children) {
     // inject our functions before writing user-defined functions
     if (!injected && child.type == ASTNode::FUNCTION) {
       out.AddChildren(internal_funcs);
       injected = true;
     }
+
     out.AddChildren(child.Emit(state));
   }
   for (FunctionInfo const &func : state.table.functions) {
@@ -173,6 +179,11 @@ WATExpr ASTNode::EmitModule(State &state) const {
         .Child("func", Variable(func.name))
         .Inline();
   }
+
+  out.Child("export", Quote("memory"))
+      .Child("memory", Variable("memory"))
+      .Inline();
+
   return out;
 }
 
@@ -405,8 +416,7 @@ std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {
                 " does not have a return statement in all control flow paths");
   }
 
-  WATExpr function{"func", Variable(info.name)};
-  function.format.newline = true;
+  WATExpr function = WATExpr("func", Variable(info.name)).Newline();
 
   // write out parameters (first info.parameters values in info.variables)
   for (size_t var_id : info.variables | std::views::take(info.parameters)) {

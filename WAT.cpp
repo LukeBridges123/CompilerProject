@@ -17,6 +17,11 @@ WATExpr &WATExpr::Inline() {
   return *this;
 }
 
+WATExpr &WATExpr::Newline() {
+  format.newline = true;
+  return *this;
+}
+
 WATExpr &WATExpr::Comment(std::string comment, bool inline_comment) {
   this->comment = comment;
   format.inline_comment = inline_comment;
@@ -150,9 +155,7 @@ std::vector<WATExpr> WATParser::Parse() {
       in.ignore(max_size, '\n');
       continue;
     }
-    WATExpr expr = ParseExpr();
-    expr.format.newline = true;
-    exprs.push_back(expr);
+    exprs.push_back(ParseExpr().Newline());
   }
   return exprs;
 }

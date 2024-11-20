@@ -60,6 +60,7 @@ struct WATExpr {
 
   void AddChildren(std::vector<WATExpr> new_children);
   WATExpr &Inline();
+  WATExpr &Newline();
   WATExpr &Comment(std::string comment, bool inline_comment = true);
 };
 
