@@ -5,6 +5,8 @@
 #include "ASTNode.hpp"
 #include "Error.hpp"
 #include "Value.hpp"
+#include "WAT.hpp"
+#include "internal_wat.hpp"
 #include "util.hpp"
 
 VarType ASTNode::ReturnType(SymbolTable const &table) const {
@@ -153,7 +155,17 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
 WATExpr ASTNode::EmitModule(State &state) const {
   assert(type == ASTNode::MODULE);
   WATExpr out{"module"};
+
+  WATParser parser{internal_wat, internal_wat_len};
+  std::vector<WATExpr> internal_funcs = parser.Parse();
+  bool injected = false;
+
   for (ASTNode const &child : children) {
+    // inject our functions before writing user-defined functions
+    if (!injected && child.type == ASTNode::FUNCTION) {
+      out.AddChildren(internal_funcs);
+      injected = true;
+    }
     out.AddChildren(child.Emit(state));
   }
   for (FunctionInfo const &func : state.table.functions) {

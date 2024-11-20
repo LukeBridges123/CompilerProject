@@ -37,11 +37,16 @@ KEY_FILES := util.hpp
 # List source files here
 SOURCE := $(PROJECT).o ASTNode.o Error.o State.o Type.o Value.o WAT.o
 
-$(PROJECT):	$(SOURCE) $(KEY_FILES)
+$(PROJECT):	$(SOURCE) $(KEY_FILES) internal_wat.hpp
 	$(CXX) $(CFLAGS) -o $(PROJECT) $(SOURCE)
 
+
+ASTNode.o: ASTNode.cpp internal_wat.hpp
 %.o: %.cpp
 	$(CXX) -c $(CFLAGS) -o $@ $<
+
+%_wat.hpp: %.wat
+	xxd -i $< > $@
 
 serve: tests
 	cd tests && python -m http.server

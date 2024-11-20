@@ -84,10 +84,10 @@ public:
 
 class WATParser {
 private:
-  std::istream &in;
+  std::istringstream in;
 
 public:
-  WATParser(std::istream &in) : in(in) {};
+  WATParser(unsigned char *array, size_t length);
   WATExpr ParseExpr();
   std::vector<WATExpr> Parse();
 };

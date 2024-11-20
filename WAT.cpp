@@ -67,12 +67,27 @@ void WATWriter::Write(WATExpr const &expr) {
   }
 }
 
+WATParser::WATParser(unsigned char *array, size_t length) {
+  // pubsetbuf trick from https://stackoverflow.com/a/7781958/4678913
+  // rose: not sure if this reinterpret cast is legal but it works <3
+  in.rdbuf()->pubsetbuf(reinterpret_cast<char *>(array), length);
+}
+
+// rose:
 // quick and dirty parsing of WAT for internal functions
+// this allows us to store our internal functions as WATExprs
+// instead of just writing the text directly into the output
+// stream like a normal person. because i think it's neat
+// objectively a worse decision by every measureable metric
+// but it does make the code to inject internal functions pretty :)
 WATExpr WATParser::ParseExpr() {
   // lex atom
   std::string atom;
   while (!in.fail()) {
     switch (in.peek()) {
+    case '(': // ignore leading paren
+      in.get();
+      continue;
     case ')':
     case ' ':
     case '\n':
@@ -99,9 +114,10 @@ WATExpr WATParser::ParseExpr() {
       if (!attr.empty())
         expr.attributes.push_back(std::string{attr});
       return expr;
-    // ignore everything until newline comments
+    // ignore everything after comment until newline
     case ';':
       in.ignore(max_size, '\n');
+      in.get();
       break;
     // if we have an attr and hit whitespace, attr is done
     case ' ':
@@ -125,12 +141,18 @@ std::vector<WATExpr> WATParser::Parse() {
 
   char token;
   in.unsetf(std::ios::skipws);
-  while (in >> token) {
-    // consume first paren
-    if (token != '(') {
-      WATParseError("Expected open parenthesis");
+  while (in >> token && !in.fail()) {
+    // consume whitespace to make sure we haven't hit EOF
+    if (std::isspace(token))
+      continue;
+    // ignore everything after comment until newline
+    if (token == ';') {
+      in.ignore(max_size, '\n');
+      continue;
     }
-    exprs.push_back(ParseExpr());
+    WATExpr expr = ParseExpr();
+    expr.format.newline = true;
+    exprs.push_back(expr);
   }
   return exprs;
 }
