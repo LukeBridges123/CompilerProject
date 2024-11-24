@@ -76,9 +76,8 @@ size_t SymbolTable::FindFunction(std::string const & name, size_t line_num) cons
 }
 
 bool SymbolTable::CheckTypes(size_t function_id, std::vector<VarType> arg_types, size_t line_num) const {
-  if (function_id >= functions.size()){
-    Error(line_num, "Tried to access invalid function during type checking");
-  }
+  assert(function_id < functions.size());
+  
   if (functions.at(function_id).variables.size() < arg_types.size()){
     Error(line_num, "Called function with too many arguments");
   }

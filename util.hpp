@@ -15,8 +15,6 @@ std::string join(Container container, std::string separator = " ",
   return out.str();
 }
 
-// took out the (const char *) version and made a generic one, since I think having both
-// was causing linker errors with "duplicate symbols"
 template <typename T> std::string Quote(T in) { return '"' + std::string{in} + '"'; } 
 
 

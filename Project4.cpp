@@ -302,8 +302,7 @@ private:
     std::string name = ConsumeToken().lexeme;
 
 
-    if (CurToken() == Lexer::ID_OPEN_PARENTHESIS){ // treat as a function call
-      ConsumeToken();
+    if (IfToken(Lexer::ID_OPEN_PARENTHESIS)){ // treat as a function call
       size_t id = table.FindFunction(name, CurToken().line_id);
       ASTNode out{ASTNode::FUNCTION_CALL, id};
 
@@ -312,12 +311,10 @@ private:
         ASTNode arg = ParseExpr();
         arg_types.push_back(arg.ReturnType(table));
         out.AddChild(std::move(arg));
-        if (CurToken().lexeme == ","){
-          ConsumeToken();
-        }
+        IfToken(',');
       }
       ConsumeToken();
-      if (not table.CheckTypes(id, arg_types, CurToken().line_id)){
+      if (!table.CheckTypes(id, arg_types, CurToken().line_id)){
         Error(CurToken().line_id, "Incorrect types in function call");
       }
       return out;
