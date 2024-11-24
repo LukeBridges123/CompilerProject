@@ -108,4 +108,5 @@ private:
   std::vector<WATExpr> EmitFunction(State &state) const;
   std::vector<WATExpr> EmitContinue(State &state) const;
   std::vector<WATExpr> EmitBreak(State &state) const;
+  std::vector<WATExpr> EmitFunctionCall(State & state) const;
 };

@@ -70,6 +70,8 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
   case CONTINUE:
   case BREAK:
     return VarType::NONE;
+  case FUNCTION_CALL:
+    return table.functions.at(var_id).rettype;
   default:
     assert(false);
     return VarType::UNKNOWN;
@@ -117,6 +119,8 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
     return EmitBreak(state);
   case CONTINUE:
     return EmitContinue(state);
+  case FUNCTION_CALL:
+    return EmitFunctionCall(state);
   case RETURN: {
     assert(children.size() == 1);
     WATExpr ret{"return"};
@@ -444,4 +448,16 @@ std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {
   }
 
   return function;
+}
+
+std::vector<WATExpr> ASTNode::EmitFunctionCall(State & state) const {
+  std::vector<WATExpr> out{};
+  for (ASTNode const & child : children){
+    std::vector<WATExpr> child_exprs = child.Emit(state);
+    for (auto expr : child_exprs){
+      out.push_back(expr);
+    }
+  }
+  out.push_back(WATExpr{"call", std::string{"$"} + state.table.functions.at(var_id).name});
+  return out;
 }

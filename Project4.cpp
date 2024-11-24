@@ -301,6 +301,7 @@ private:
 
     std::string name = ConsumeToken().lexeme;
 
+
     if (CurToken() == Lexer::ID_OPEN_PARENTHESIS){ // treat as a function call
       ConsumeToken();
       size_t id = table.FindFunction(name, CurToken().line_id);
