@@ -64,3 +64,33 @@ size_t SymbolTable::AddFunction(std::string const &name, size_t line_num) {
   functions.emplace_back(name, line_num);
   return idx;
 }
+
+
+size_t SymbolTable::FindFunction(std::string const & name, size_t line_num) const {
+  for (size_t curr_function = 0; curr_function < functions.size(); curr_function++){
+    if (functions.at(curr_function).name == name){
+      return curr_function;
+    }
+  }
+  Error(line_num, "Unknown function ", name);
+}
+
+bool SymbolTable::CheckTypes(size_t function_id, std::vector<VarType> arg_types, size_t line_num) const {
+  assert(function_id < functions.size());
+  
+  if (functions.at(function_id).variables.size() < arg_types.size()){
+    Error(line_num, "Called function with too many arguments");
+  }
+  if (functions.at(function_id).variables.size() > arg_types.size()){
+    Error(line_num, "Called function with too few arguments");
+  }
+
+  for (size_t i = 0; i < arg_types.size(); i++){
+    size_t var_id = functions.at(function_id).variables.at(i);
+
+    if (variables.at(var_id).type_var != arg_types.at(i)){
+      return false;
+    }
+  }
+  return true;
+}

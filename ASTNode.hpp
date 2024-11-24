@@ -35,7 +35,8 @@ public:
     FUNCTION,
     RETURN,
     CONTINUE,
-    BREAK
+    BREAK,
+    FUNCTION_CALL
   };
   Type const type;
   std::optional<Value> value = std::nullopt;
@@ -107,4 +108,5 @@ private:
   std::vector<WATExpr> EmitFunction(State &state) const;
   std::vector<WATExpr> EmitContinue(State &state) const;
   std::vector<WATExpr> EmitBreak(State &state) const;
+  std::vector<WATExpr> EmitFunctionCall(State & state) const;
 };

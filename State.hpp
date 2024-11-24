@@ -45,6 +45,8 @@ public:
   bool HasVar(std::string const &name) const;
   size_t AddVar(std::string const &name, VarType type, size_t line_num);
   size_t AddFunction(std::string const &name, size_t line_num);
+  size_t FindFunction(std::string const & name, size_t line_num) const;
+  bool CheckTypes(size_t function_id, std::vector<VarType> arg_types, size_t line_num) const ;
 };
 
 struct State {
