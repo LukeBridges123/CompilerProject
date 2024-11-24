@@ -35,7 +35,8 @@ public:
     FUNCTION,
     RETURN,
     CONTINUE,
-    BREAK
+    BREAK,
+    FUNCTION_CALL
   };
   Type const type;
   std::optional<Value> value = std::nullopt;

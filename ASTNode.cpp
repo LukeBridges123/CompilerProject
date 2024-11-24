@@ -155,7 +155,7 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
 WATExpr ASTNode::EmitModule(State &state) const {
   assert(type == ASTNode::MODULE);
   WATExpr out{"module"};
-
+  
   WATParser parser{internal_wat, internal_wat_len};
   std::vector<WATExpr> internal_funcs = parser.Parse();
   bool injected = false;
@@ -164,6 +164,7 @@ WATExpr ASTNode::EmitModule(State &state) const {
   WATExpr &global = out.Child("global", Variable("_free")).Newline();
   global.Child("mut", "i32").Inline();
   global.Child("i32.const", "0").Inline();
+  
 
   for (ASTNode const &child : children) {
     // inject our functions before writing user-defined functions
@@ -171,19 +172,21 @@ WATExpr ASTNode::EmitModule(State &state) const {
       out.AddChildren(internal_funcs);
       injected = true;
     }
+  
 
     out.AddChildren(child.Emit(state));
   }
+
+  
   for (FunctionInfo const &func : state.table.functions) {
     out.Child("export", Quote(func.name))
         .Child("func", Variable(func.name))
         .Inline();
   }
-
+  
   out.Child("export", Quote("memory"))
       .Child("memory", Variable("memory"))
       .Inline();
-
   return out;
 }
 

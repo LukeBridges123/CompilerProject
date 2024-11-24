@@ -297,6 +297,34 @@ private:
     Error(token, "Attempt to cast to unknown type ", token.lexeme.substr(1));
   }
 
+  ASTNode ParseIdentifier(){
+
+    std::string name = ConsumeToken().lexeme;
+
+    if (CurToken() == Lexer::ID_OPEN_PARENTHESIS){ // treat as a function call
+      ConsumeToken();
+      size_t id = table.FindFunction(name, CurToken().line_id);
+      ASTNode out{ASTNode::FUNCTION_CALL, id};
+
+      std::vector<VarType> arg_types{};
+      while (CurToken() != Lexer::ID_CLOSE_PARENTHESIS){
+        ASTNode arg = ParseExpr();
+        arg_types.push_back(arg.ReturnType(table));
+        out.AddChild(std::move(arg));
+        if (CurToken().lexeme == ","){
+          ConsumeToken();
+        }
+      }
+      ConsumeToken();
+      if (not table.CheckTypes(id, arg_types, CurToken().line_id)){
+        Error(CurToken().line_id, "Incorrect types in function call");
+      }
+      return out;
+    } else {
+      return ASTNode(ASTNode::IDENTIFIER, table.FindVar(name, CurToken().line_id));
+    }
+  }
+
   ASTNode ParseTerm() {
     Token const &current = CurToken();
     switch (current) {
@@ -309,9 +337,7 @@ private:
     case Lexer::ID_CHAR:
       return CheckTypeCast(ASTNode(ASTNode::LITERAL, ConsumeToken().lexeme[1]));
     case Lexer::ID_ID:
-      return CheckTypeCast(
-          ASTNode(ASTNode::IDENTIFIER,
-                  table.FindVar(ConsumeToken().lexeme, current.line_id)));
+      return CheckTypeCast(ParseIdentifier());
     case Lexer::ID_OPEN_PARENTHESIS: {
       ExpectToken(Lexer::ID_OPEN_PARENTHESIS);
       ASTNode subexpression = ParseExpr();

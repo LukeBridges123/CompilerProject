@@ -15,8 +15,8 @@ std::string join(Container container, std::string separator = " ",
   return out.str();
 }
 
-template <typename T> std::string Quote(T in) { return '"' + in + '"'; }
-std::string Quote(const char *in) { return '"' + std::string{in} + '"'; }
+template <typename T> std::string Quote(T in) { return '"' + std::string{in} + '"'; }
+
 
 template <typename... T> std::string Variable(T... components) {
   std::stringstream out{};
