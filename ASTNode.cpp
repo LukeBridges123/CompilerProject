@@ -124,7 +124,7 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
   case RETURN: {
     assert(children.size() == 1);
     WATExpr ret{"return"};
-    ret.AddChildren(children.at(0).Emit(state));
+    ret.Push(children.at(0).Emit(state));
     return ret;
   }
   case CAST_INT:
@@ -176,11 +176,11 @@ WATExpr ASTNode::EmitModule(State &state) const {
   for (ASTNode const &child : children) {
     // inject our functions before writing user-defined functions
     if (!injected && child.type == ASTNode::FUNCTION) {
-      out.AddChildren(std::move(internal_funcs));
+      out.Push(std::move(internal_funcs));
       injected = true;
     }
 
-    out.AddChildren(child.Emit(state));
+    out.Push(child.Emit(state));
   }
 
   // generate exports for functions and memory
@@ -310,14 +310,12 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     WATExpr expr{left_type.WATOperation("mul")};
     WATExpr negative_one{left_type.WATOperation("const"), "-1"};
     expr.Child(negative_one);
-    expr.AddChildren(std::move(left));
+    expr.Push(std::move(left));
     return expr;
   } else if (literal == "sqrt") {
-    WATExpr sqrt{"f64.sqrt"};
-    sqrt.AddChildren(std::move(left));
+    WATExpr sqrt{"f64.sqrt", std::move(left)};
     if (left_type == VarType::INT) {
-      WATExpr convert{"f64.convert_i32_s"};
-      sqrt.AddChildren(convert);
+      sqrt.Child("f64.convert_i32_s");
     }
 
     return sqrt;
@@ -331,11 +329,11 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
 
   if (literal == "&&") {
     WATExpr test_first{"i32.eq"};
-    test_first.AddChildren(std::move(left));
+    test_first.Push(std::move(left));
     test_first.Child(WATExpr{"i32.const", "0"});
 
     WATExpr test_second{"i32.ne"};
-    test_second.AddChildren(std::move(right));
+    test_second.Push(std::move(right));
     test_second.Child(WATExpr{"i32.const", "0"});
     WATExpr cond{"if"};
     cond.Child(WATExpr{"result", "i32"});
@@ -346,11 +344,11 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
 
   if (literal == "||") {
     WATExpr test_first{"i32.eq"};
-    test_first.AddChildren(std::move(left));
+    test_first.Push(std::move(left));
     test_first.Child(WATExpr{"i32.const", "1"});
 
     WATExpr test_second{"i32.ne"};
-    test_second.AddChildren(std::move(right));
+    test_second.Push(std::move(right));
     test_second.Child(WATExpr{"i32.const", "0"});
     WATExpr cond{"if"};
     cond.Child(WATExpr{"result", "i32"});
@@ -366,11 +364,11 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
       op_name, (literal == "<" || literal == ">" || literal == "<=" ||
                 literal == ">=" || literal == "/"))};
 
-  expr.AddChildren(std::move(left));
+  expr.Push(std::move(left));
   if (left_type == VarType::INT && right_type == VarType::DOUBLE) {
     expr.Child(WATExpr{right_type.WATOperation("convert_i32_s")});
   }
-  expr.AddChildren(std::move(right));
+  expr.Push(std::move(right));
   if (right_type == VarType::INT && left_type == VarType::DOUBLE) {
     expr.Child(WATExpr{left_type.WATOperation("convert_i32_s")});
   }
@@ -399,9 +397,9 @@ std::vector<WATExpr> ASTNode::EmitWhile(State &state) const {
       .Comment("Check while loop condition", false)
       .Child("i32.eqz")
       .Comment("Invert condition, break if condition false", false)
-      .AddChildren(std::move(condition));
+      .Push(std::move(condition));
 
-  loop.AddChildren(children.at(1).Emit(state));
+  loop.Push(children.at(1).Emit(state));
   loop.Child("br", loop_id).Comment("Jump to start of while loop");
 
   state.loop_idx.pop_back();
@@ -448,7 +446,7 @@ std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {
   }
 
   for (ASTNode const &child : children) {
-    function.AddChildren(child.Emit(state));
+    function.Push(child.Emit(state));
   }
 
   return function;

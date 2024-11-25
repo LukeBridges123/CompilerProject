@@ -32,46 +32,38 @@ struct WATExpr {
   std::optional<std::string> comment = std::nullopt;
   FormatOptions format{};
 
-  // helper constructor for using Expr children
-  // WATExpr(std::string atom, std::vector<WATExpr> children)
-  //     : atom(atom), children(exprs_to_children(std::move(children))) {};
-
-  // expand children args into children vector
   template <typename... Args>
   WATExpr(std::string atom, Args &&...children) : atom(atom) {
+    // expand children args into children vector
     if constexpr (sizeof...(children) > 0) {
       Push(std::forward<Args>(children)...);
     }
   }
 
-  template <typename T, typename... Rest> void Push(T &&child, Rest &&...rest) {
+  // push methods allow method chaining with current WATExpr
+  template <typename T, typename... Args>
+  WATExpr &Push(T &&child, Args &&...children) {
     Push(child);
-    Push(std::forward<Rest>(rest)...);
+    Push(std::forward<Args>(children)...);
+    return *this;
   }
-
-  void Push(WATExpr &&child) {
-    children.push_back(WATChild{std::in_place_type<WATExpr>, std::move(child)});
-  }
-
-  void Push(std::vector<WATExpr> &&children) {
-    AddChildren(std::move(children));
-  }
-
-  template <typename T> void Push(T &&child) {
+  template <typename T> WATExpr &Push(T &&child) {
     children.push_back(
         WATChild{std::in_place_type<std::string>, std::string{child}});
+    return *this;
   }
+  WATExpr &Push(WATExpr &&child);
+  WATExpr &Push(std::vector<WATExpr> &&children);
 
+  // child method allows method chaining with child WATExpr
   // from std::vector::emplace_back
   template <typename... Args> WATExpr &Child(Args &&...args) {
     children.push_back(WATExpr(std::forward<Args>(args)...));
     return std::get<WATExpr>(children.back());
-  };
+  }
 
   operator std::vector<WATExpr>() const { return {*this}; }
 
-  void AddChildren(std::vector<WATChild> new_children);
-  void AddChildren(std::vector<WATExpr> &&new_children);
   WATExpr &Inline();
   WATExpr &Newline();
   WATExpr &Comment(std::string comment, bool inline_comment = true);

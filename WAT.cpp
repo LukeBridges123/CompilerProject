@@ -9,19 +9,14 @@
 // from https://en.cppreference.com/w/cpp/io/basic_istream/ignore
 constexpr auto max_size = std::numeric_limits<std::streamsize>::max();
 
-void WATExpr::AddChildren(std::vector<WATChild> new_children) {
-  std::move(new_children.begin(), new_children.end(),
-            std::back_inserter(children));
+WATExpr &WATExpr::Push(WATExpr &&child) {
+  children.push_back(WATChild{std::in_place_type<WATExpr>, std::move(child)});
+  return *this;
 }
 
-void WATExpr::AddChildren(std::vector<WATExpr> &&new_children) {
-  AddChildren(exprs_to_children(std::move(new_children)));
-}
-
-std::vector<WATChild> exprs_to_children(std::vector<WATExpr> &&exprs) {
-  std::vector<WATChild> out{};
-  std::ranges::move(exprs, std::back_inserter(out));
-  return out;
+WATExpr &WATExpr::Push(std::vector<WATExpr> &&children) {
+  std::ranges::move(children, std::back_inserter(this->children));
+  return *this;
 }
 
 WATExpr &WATExpr::Inline() {
