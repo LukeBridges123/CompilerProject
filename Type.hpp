@@ -14,6 +14,7 @@ public:
     CHAR,
     INT,
     DOUBLE,
+    STRING
   };
 
 private:

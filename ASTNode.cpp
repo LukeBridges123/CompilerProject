@@ -164,11 +164,15 @@ WATExpr ASTNode::EmitModule(State &state) const {
   std::vector<WATExpr> internal_funcs = parser.Parse();
   bool injected = false;
 
+  // generate memory-related declarations
+  // unfortunately we can't export $memory here due to WATExpr not allowing
+  // children before attributes
   out.Child("memory", Variable("memory"), "1");
   WATExpr &global = out.Child("global", Variable("_free")).Newline();
   global.Child("mut", "i32").Inline();
   global.Child("i32.const", "0").Inline();
 
+  // generate function body
   for (ASTNode const &child : children) {
     // inject our functions before writing user-defined functions
     if (!injected && child.type == ASTNode::FUNCTION) {
@@ -179,6 +183,7 @@ WATExpr ASTNode::EmitModule(State &state) const {
     out.AddChildren(child.Emit(state));
   }
 
+  // generate exports for functions and memory
   for (FunctionInfo const &func : state.table.functions) {
     out.Child("export", Quote(func.name))
         .Child("func", Variable(func.name))

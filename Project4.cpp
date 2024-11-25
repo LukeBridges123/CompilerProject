@@ -1,8 +1,8 @@
 #include <cassert>
 #include <fstream>
 #include <memory>
+#include <regex>
 #include <string>
-
 #include <utility>
 #include <vector>
 
@@ -19,7 +19,7 @@ class Tubular {
 private:
   std::vector<Token> tokens{};
   emplex::Lexer lexer{};
-  SymbolTable table{};
+  State state{};
   size_t token_idx{0};
   ASTNode root{ASTNode::MODULE};
   size_t loop_depth = 0;
@@ -63,11 +63,12 @@ private:
     ExpectToken(Lexer::ID_FUNCTION);
 
     Token func_name = ExpectToken(Lexer::ID_ID);
-    size_t func_id = table.AddFunction(func_name.lexeme, func_name.line_id);
-    FunctionInfo &func_info = table.functions.at(func_id);
+    size_t func_id =
+        state.table.AddFunction(func_name.lexeme, func_name.line_id);
+    FunctionInfo &func_info = state.table.functions.at(func_id);
     ASTNode function{ASTNode::FUNCTION, func_id};
 
-    table.PushScope();
+    state.table.PushScope();
 
     ExpectToken(Lexer::ID_OPEN_PARENTHESIS);
 
@@ -76,7 +77,7 @@ private:
       VarType var_type = ExpectToken(Lexer::ID_TYPE);
       Token var_name = ExpectToken(Lexer::ID_ID);
 
-      table.AddVar(var_name.lexeme, var_type, var_name.line_id);
+      state.table.AddVar(var_name.lexeme, var_type, var_name.line_id);
       func_info.parameters++;
 
       IfToken(','); // consume comma if exists
@@ -95,9 +96,9 @@ private:
 
   ASTNode ParseScope() {
     ASTNode scope{ASTNode::SCOPE};
-    table.PushScope();
+    state.table.PushScope();
     ParseBlock(scope);
-    table.PopScope();
+    state.table.PopScope();
     return scope;
   }
 
@@ -105,14 +106,14 @@ private:
     VarType const &var_type = ExpectToken(Lexer::ID_TYPE);
     Token const &ident = ExpectToken(Lexer::ID_ID);
     if (IfToken(Lexer::ID_ENDLINE)) {
-      table.AddVar(ident.lexeme, var_type, ident.line_id);
+      state.table.AddVar(ident.lexeme, var_type, ident.line_id);
       return ASTNode{};
     }
     ExpectToken(Lexer::ID_ASSIGN);
 
     ASTNode expr = ParseExpr();
     ExpectToken(Lexer::ID_ENDLINE);
-    VarType right_type = expr.ReturnType(table);
+    VarType right_type = expr.ReturnType(state.table);
     if (var_type < right_type) {
       Error(
           CurToken(),
@@ -121,7 +122,7 @@ private:
 
     // don't add until _after_ we possibly resolve idents in expression
     // ex. var foo = foo should error if foo is undefined
-    size_t var_id = table.AddVar(ident.lexeme, var_type, ident.line_id);
+    size_t var_id = state.table.AddVar(ident.lexeme, var_type, ident.line_id);
 
     ASTNode out = ASTNode{ASTNode::ASSIGN};
     out.AddChildren(ASTNode(ASTNode::IDENTIFIER, var_id), std::move(expr));
@@ -140,8 +141,8 @@ private:
       }
       ExpectToken(Lexer::ID_ASSIGN);
       ASTNode rhs = ParseAssign();
-      VarType left_type = lhs.ReturnType(table);
-      VarType right_type = rhs.ReturnType(table);
+      VarType left_type = lhs.ReturnType(state.table);
+      VarType right_type = rhs.ReturnType(state.table);
       if (left_type < right_type) {
         Error(CurToken(), "Tried to assign higher-precision value to "
                           "lower-precision variable");
@@ -157,8 +158,8 @@ private:
       ConsumeToken();
       ASTNode rhs = ParseAnd();
 
-      if (lhs->ReturnType(table) != VarType::INT ||
-          rhs.ReturnType(table) != VarType::INT) {
+      if (lhs->ReturnType(state.table) != VarType::INT ||
+          rhs.ReturnType(state.table) != VarType::INT) {
         Error(CurToken(), "Used non-int value in an or expression");
       }
       lhs = std::make_unique<ASTNode>(
@@ -172,8 +173,8 @@ private:
     while (CurToken().lexeme == "&&") {
       ConsumeToken();
       ASTNode rhs = ParseEquals();
-      if (lhs->ReturnType(table) != VarType::INT ||
-          rhs.ReturnType(table) != VarType::INT) {
+      if (lhs->ReturnType(state.table) != VarType::INT ||
+          rhs.ReturnType(state.table) != VarType::INT) {
         Error(CurToken(), "Used non-int value in an and expression");
       }
       lhs = std::make_unique<ASTNode>(
@@ -223,14 +224,15 @@ private:
       std::string operation = ConsumeToken().lexeme;
       ASTNode rhs = ParseTerm();
 
-      if (lhs->ReturnType(table) == VarType::CHAR ||
-          rhs.ReturnType(table) == VarType::CHAR) {
+      if (lhs->ReturnType(state.table) == VarType::CHAR ||
+          rhs.ReturnType(state.table) == VarType::CHAR) {
         Error(CurToken(), "Invalid action: Cannot perform multiplication, "
                           "division, or modulus with a char type!");
       }
 
-      if (operation == "%" && (lhs->ReturnType(table) == VarType::DOUBLE ||
-                               rhs.ReturnType(table) == VarType::DOUBLE)) {
+      if (operation == "%" &&
+          (lhs->ReturnType(state.table) == VarType::DOUBLE ||
+           rhs.ReturnType(state.table) == VarType::DOUBLE)) {
         Error(CurToken(),
               "Invalid action: Cannot perform modulus with a double type!");
       }
@@ -242,11 +244,11 @@ private:
   }
 
   ASTNode ParseNegate() {
-    auto lhs = std::make_unique<ASTNode>(ASTNode::LITERAL, -1);
+    auto lhs = std::make_unique<ASTNode>(ASTNode::LITERAL, Value{-1});
     Token const &curr_token = CurToken();
     auto rhs = ParseTerm();
 
-    if (rhs.ReturnType(table) == VarType::CHAR) {
+    if (rhs.ReturnType(state.table) == VarType::CHAR) {
       Error(curr_token, "Invalid action: Cannot negate a char type!");
     }
 
@@ -257,7 +259,7 @@ private:
     Token const curr_token = CurToken();
     auto rhs = ParseTerm();
 
-    if (rhs.ReturnType(table) != VarType::INT) {
+    if (rhs.ReturnType(state.table) != VarType::INT) {
       Error(curr_token, "Invalid action: Cannot perform a logical \"NOT\" on a "
                         "type thats not an INT!");
     }
@@ -302,38 +304,47 @@ private:
     std::string name = ConsumeToken().lexeme;
 
     if (IfToken(Lexer::ID_OPEN_PARENTHESIS)) { // treat as a function call
-      size_t id = table.FindFunction(name, CurToken().line_id);
+      size_t id = state.table.FindFunction(name, CurToken().line_id);
       ASTNode out{ASTNode::FUNCTION_CALL, id};
 
       std::vector<VarType> arg_types{};
       while (CurToken() != Lexer::ID_CLOSE_PARENTHESIS) {
         ASTNode arg = ParseExpr();
-        arg_types.push_back(arg.ReturnType(table));
+        arg_types.push_back(arg.ReturnType(state.table));
         out.AddChild(std::move(arg));
         IfToken(',');
       }
       ConsumeToken();
-      if (!table.CheckTypes(id, arg_types, CurToken().line_id)) {
+      if (!state.table.CheckTypes(id, arg_types, CurToken().line_id)) {
         Error(CurToken().line_id, "Incorrect types in function call");
       }
       return out;
     } else {
       return ASTNode(ASTNode::IDENTIFIER,
-                     table.FindVar(name, CurToken().line_id));
+                     state.table.FindVar(name, CurToken().line_id));
     }
+  }
+
+  ASTNode ParseString() {
+    Token const &token = ExpectToken(Lexer::ID_STRING);
+    size_t string_pos =
+        state.AddString(token.lexeme.substr(1, token.lexeme.size() - 2));
+    return ASTNode{ASTNode::LITERAL, Value{string_pos}};
+  }
+
+  template <typename T> ASTNode ConstructLiteral(T value) {
+    return CheckTypeCast(ASTNode(ASTNode::LITERAL, Value{value}));
   }
 
   ASTNode ParseTerm() {
     Token const &current = CurToken();
     switch (current) {
     case Lexer::ID_FLOAT:
-      return CheckTypeCast(
-          ASTNode(ASTNode::LITERAL, std::stod(ConsumeToken().lexeme)));
+      return ConstructLiteral(std::stod(ConsumeToken().lexeme));
     case Lexer::ID_INT:
-      return CheckTypeCast(
-          ASTNode(ASTNode::LITERAL, std::stoi(ConsumeToken().lexeme)));
+      return ConstructLiteral(std::stoi(ConsumeToken().lexeme));
     case Lexer::ID_CHAR:
-      return CheckTypeCast(ASTNode(ASTNode::LITERAL, ConsumeToken().lexeme[1]));
+      return ConstructLiteral(ConsumeToken().lexeme[1]);
     case Lexer::ID_ID:
       return CheckTypeCast(ParseIdentifier());
     case Lexer::ID_OPEN_PARENTHESIS: {
@@ -358,6 +369,8 @@ private:
       ExpectToken(Lexer::ID_CLOSE_PARENTHESIS);
       return CheckTypeCast(std::move(subexpr));
     }
+    case Lexer::ID_STRING:
+      return ParseString();
     default:
       ErrorUnexpected(current);
     }
@@ -464,10 +477,7 @@ public:
     }
   }
 
-  WATExpr GenerateCode() {
-    State state{std::move(table)};
-    return root.EmitModule(state);
-  }
+  WATExpr GenerateCode() { return root.EmitModule(state); }
 };
 
 int main(int argc, char *argv[]) {
