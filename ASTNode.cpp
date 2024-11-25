@@ -158,9 +158,7 @@ WATExpr ASTNode::EmitModule(State &state) const {
   bool injected = false;
 
   // generate memory-related declarations
-  // unfortunately we can't export $memory here due to WATExpr not allowing
-  // children before attributes
-  out.Child("memory", Variable("memory"), "1");
+  out.Child("memory", WATExpr{"export", Quote("memory")}, "1");
   WATExpr &global = out.Child("global", Variable("_free")).Newline();
   global.Child("mut", "i32").Inline();
   global.Child("i32.const", "0").Inline();
@@ -183,9 +181,6 @@ WATExpr ASTNode::EmitModule(State &state) const {
         .Inline();
   }
 
-  out.Child("export", Quote("memory"))
-      .Child("memory", Variable("memory"))
-      .Inline();
   return out;
 }
 
