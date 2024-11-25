@@ -49,16 +49,17 @@ struct WATExpr {
     Push(std::forward<Rest>(rest)...);
   }
 
+  void Push(WATExpr &&child) {
+    children.push_back(WATChild{std::in_place_type<WATExpr>, std::move(child)});
+  }
+
+  void Push(std::vector<WATExpr> &&children) {
+    AddChildren(std::move(children));
+  }
+
   template <typename T> void Push(T &&child) {
-    if constexpr (std::same_as<std::decay_t<T>, WATExpr>) {
-      children.push_back(
-          WATChild{std::in_place_type<WATExpr>, std::move(child)});
-    } else if constexpr (std::same_as<std::decay_t<T>, std::vector<WATExpr>>) {
-      AddChildren(child);
-    } else {
-      children.push_back(
-          WATChild{std::in_place_type<std::string>, std::string{child}});
-    }
+    children.push_back(
+        WATChild{std::in_place_type<std::string>, std::string{child}});
   }
 
   // from std::vector::emplace_back
@@ -70,7 +71,7 @@ struct WATExpr {
   operator std::vector<WATExpr>() const { return {*this}; }
 
   void AddChildren(std::vector<WATChild> new_children);
-  void AddChildren(std::vector<WATExpr> new_children);
+  void AddChildren(std::vector<WATExpr> &&new_children);
   WATExpr &Inline();
   WATExpr &Newline();
   WATExpr &Comment(std::string comment, bool inline_comment = true);

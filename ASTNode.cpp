@@ -176,7 +176,7 @@ WATExpr ASTNode::EmitModule(State &state) const {
   for (ASTNode const &child : children) {
     // inject our functions before writing user-defined functions
     if (!injected && child.type == ASTNode::FUNCTION) {
-      out.AddChildren(internal_funcs);
+      out.AddChildren(std::move(internal_funcs));
       injected = true;
     }
 
@@ -235,7 +235,8 @@ std::vector<WATExpr> ASTNode::EmitAssign(State &state) const {
   if (left_type == VarType::DOUBLE && right_type == VarType::INT) {
     rvalue.push_back(WATExpr{"f64.convert_i32_s"});
   }
-  return WATExpr{"local.set", Variable("var", children[0].var_id), rvalue};
+  return WATExpr{"local.set", Variable("var", children[0].var_id),
+                 std::move(rvalue)};
 }
 
 std::vector<WATExpr> ASTNode::EmitChainAssign(State &state) const {
@@ -257,7 +258,8 @@ std::vector<WATExpr> ASTNode::EmitChainAssign(State &state) const {
   if (left_type == VarType::DOUBLE && right_type == VarType::INT) {
     rvalue.push_back(WATExpr{"f64.convert_i32_s"});
   }
-  return WATExpr{"local.tee", Variable("var", children[0].var_id), rvalue};
+  return WATExpr{"local.tee", Variable("var", children[0].var_id),
+                 std::move(rvalue)};
 }
 
 std::vector<WATExpr>
@@ -308,11 +310,11 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     WATExpr expr{left_type.WATOperation("mul")};
     WATExpr negative_one{left_type.WATOperation("const"), "-1"};
     expr.Child(negative_one);
-    expr.AddChildren(left);
+    expr.AddChildren(std::move(left));
     return expr;
   } else if (literal == "sqrt") {
     WATExpr sqrt{"f64.sqrt"};
-    sqrt.AddChildren(left);
+    sqrt.AddChildren(std::move(left));
     if (left_type == VarType::INT) {
       WATExpr convert{"f64.convert_i32_s"};
       sqrt.AddChildren(convert);
@@ -329,31 +331,31 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
 
   if (literal == "&&") {
     WATExpr test_first{"i32.eq"};
-    test_first.AddChildren(left);
+    test_first.AddChildren(std::move(left));
     test_first.Child(WATExpr{"i32.const", "0"});
 
     WATExpr test_second{"i32.ne"};
-    test_second.AddChildren(right);
+    test_second.AddChildren(std::move(right));
     test_second.Child(WATExpr{"i32.const", "0"});
     WATExpr cond{"if"};
     cond.Child(WATExpr{"result", "i32"});
     cond.Child(WATExpr{"then", WATExpr{"i32.const 0"}});
-    cond.Child(WATExpr{"else", test_second});
+    cond.Child(WATExpr{"else", std::move(test_second)});
     return {test_first, cond};
   }
 
   if (literal == "||") {
     WATExpr test_first{"i32.eq"};
-    test_first.AddChildren(left);
+    test_first.AddChildren(std::move(left));
     test_first.Child(WATExpr{"i32.const", "1"});
 
     WATExpr test_second{"i32.ne"};
-    test_second.AddChildren(right);
+    test_second.AddChildren(std::move(right));
     test_second.Child(WATExpr{"i32.const", "0"});
     WATExpr cond{"if"};
     cond.Child(WATExpr{"result", "i32"});
     cond.Child(WATExpr{"then", WATExpr{"i32.const 1"}});
-    cond.Child(WATExpr{"else", test_second});
+    cond.Child(WATExpr{"else", std::move(test_second)});
     return {test_first, cond};
   }
 
@@ -364,13 +366,13 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
       op_name, (literal == "<" || literal == ">" || literal == "<=" ||
                 literal == ">=" || literal == "/"))};
 
-  expr.AddChildren(left);
+  expr.AddChildren(std::move(left));
   if (left_type == VarType::INT && right_type == VarType::DOUBLE) {
-    expr.AddChildren(WATExpr{right_type.WATOperation("convert_i32_s")});
+    expr.Child(WATExpr{right_type.WATOperation("convert_i32_s")});
   }
-  expr.AddChildren(right);
+  expr.AddChildren(std::move(right));
   if (right_type == VarType::INT && left_type == VarType::DOUBLE) {
-    expr.AddChildren(WATExpr{left_type.WATOperation("convert_i32_s")});
+    expr.Child(WATExpr{left_type.WATOperation("convert_i32_s")});
   }
 
   return expr;
@@ -397,7 +399,7 @@ std::vector<WATExpr> ASTNode::EmitWhile(State &state) const {
       .Comment("Check while loop condition", false)
       .Child("i32.eqz")
       .Comment("Invert condition, break if condition false", false)
-      .AddChildren(condition);
+      .AddChildren(std::move(condition));
 
   loop.AddChildren(children.at(1).Emit(state));
   loop.Child("br", loop_id).Comment("Jump to start of while loop");

@@ -14,7 +14,7 @@ void WATExpr::AddChildren(std::vector<WATChild> new_children) {
             std::back_inserter(children));
 }
 
-void WATExpr::AddChildren(std::vector<WATExpr> new_children) {
+void WATExpr::AddChildren(std::vector<WATExpr> &&new_children) {
   AddChildren(exprs_to_children(std::move(new_children)));
 }
 
