@@ -297,29 +297,29 @@ private:
     Error(token, "Attempt to cast to unknown type ", token.lexeme.substr(1));
   }
 
-  ASTNode ParseIdentifier(){
+  ASTNode ParseIdentifier() {
 
     std::string name = ConsumeToken().lexeme;
 
-
-    if (IfToken(Lexer::ID_OPEN_PARENTHESIS)){ // treat as a function call
+    if (IfToken(Lexer::ID_OPEN_PARENTHESIS)) { // treat as a function call
       size_t id = table.FindFunction(name, CurToken().line_id);
       ASTNode out{ASTNode::FUNCTION_CALL, id};
 
       std::vector<VarType> arg_types{};
-      while (CurToken() != Lexer::ID_CLOSE_PARENTHESIS){
+      while (CurToken() != Lexer::ID_CLOSE_PARENTHESIS) {
         ASTNode arg = ParseExpr();
         arg_types.push_back(arg.ReturnType(table));
         out.AddChild(std::move(arg));
         IfToken(',');
       }
       ConsumeToken();
-      if (!table.CheckTypes(id, arg_types, CurToken().line_id)){
+      if (!table.CheckTypes(id, arg_types, CurToken().line_id)) {
         Error(CurToken().line_id, "Incorrect types in function call");
       }
       return out;
     } else {
-      return ASTNode(ASTNode::IDENTIFIER, table.FindVar(name, CurToken().line_id));
+      return ASTNode(ASTNode::IDENTIFIER,
+                     table.FindVar(name, CurToken().line_id));
     }
   }
 
