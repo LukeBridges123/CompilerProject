@@ -235,7 +235,7 @@ std::vector<WATExpr> ASTNode::EmitAssign(State &state) const {
   if (left_type == VarType::DOUBLE && right_type == VarType::INT) {
     rvalue.push_back(WATExpr{"f64.convert_i32_s"});
   }
-  return WATExpr{"local.set", {Variable("var", children[0].var_id)}, rvalue};
+  return WATExpr{"local.set", Variable("var", children[0].var_id), rvalue};
 }
 
 std::vector<WATExpr> ASTNode::EmitChainAssign(State &state) const {
@@ -257,7 +257,7 @@ std::vector<WATExpr> ASTNode::EmitChainAssign(State &state) const {
   if (left_type == VarType::DOUBLE && right_type == VarType::INT) {
     rvalue.push_back(WATExpr{"f64.convert_i32_s"});
   }
-  return WATExpr{"local.tee", {Variable("var", children[0].var_id)}, rvalue};
+  return WATExpr{"local.tee", Variable("var", children[0].var_id), rvalue};
 }
 
 std::vector<WATExpr>
@@ -275,11 +275,11 @@ std::vector<WATExpr> ASTNode::EmitConditional(State &state) const {
     if_then_else.Child("result", rettype.WATType()).Inline();
   }
 
-  WATExpr then = WATExpr{"then", {}, children[1].Emit(state)};
+  WATExpr then = WATExpr{"then", children[1].Emit(state)};
   if_then_else.Child(then);
 
   if (children.size() == 3) {
-    WATExpr else_expr{"else", {}, children[2].Emit(state)};
+    WATExpr else_expr{"else", children[2].Emit(state)};
     if_then_else.Child(else_expr);
   }
   condition.push_back(if_then_else);
@@ -297,9 +297,9 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     WATExpr ret0{"then", "i32.const 0"};
     WATExpr ret1{"else", "i32.const 1"};
 
-    cond.AddChildren({ret_type});
-    cond.AddChildren({ret0});
-    cond.AddChildren({ret1});
+    cond.Child(ret_type);
+    cond.Child(ret0);
+    cond.Child(ret1);
 
     std::vector<WATExpr> expr = left;
     expr.push_back(cond);
@@ -307,7 +307,7 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
   } else if (literal == "-" && children.size() == 1) {
     WATExpr expr{left_type.WATOperation("mul")};
     WATExpr negative_one{left_type.WATOperation("const"), "-1"};
-    expr.AddChildren({negative_one});
+    expr.Child(negative_one);
     expr.AddChildren(left);
     return expr;
   } else if (literal == "sqrt") {
@@ -337,8 +337,8 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     test_second.Child(WATExpr{"i32.const", "0"});
     WATExpr cond{"if"};
     cond.Child(WATExpr{"result", "i32"});
-    cond.Child(WATExpr{"then", {}, WATExpr{"i32.const 0"}});
-    cond.Child(WATExpr{"else", {}, test_second});
+    cond.Child(WATExpr{"then", WATExpr{"i32.const 0"}});
+    cond.Child(WATExpr{"else", test_second});
     return {test_first, cond};
   }
 
@@ -352,8 +352,8 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     test_second.Child(WATExpr{"i32.const", "0"});
     WATExpr cond{"if"};
     cond.Child(WATExpr{"result", "i32"});
-    cond.Child(WATExpr{"then", {}, WATExpr{"i32.const 1"}});
-    cond.Child(WATExpr{"else", {}, test_second});
+    cond.Child(WATExpr{"then", WATExpr{"i32.const 1"}});
+    cond.Child(WATExpr{"else", test_second});
     return {test_first, cond};
   }
 
