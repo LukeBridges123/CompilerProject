@@ -9,6 +9,11 @@
 // from https://en.cppreference.com/w/cpp/io/basic_istream/ignore
 constexpr auto max_size = std::numeric_limits<std::streamsize>::max();
 
+WATExpr &WATExpr::Push(WATExpr &child) {
+  children.push_back(WATChild{std::in_place_type<WATExpr>, child});
+  return *this;
+}
+
 WATExpr &WATExpr::Push(WATExpr &&child) {
   children.push_back(WATChild{std::in_place_type<WATExpr>, std::move(child)});
   return *this;
@@ -127,7 +132,7 @@ WATExpr WATParser::ParseExpr() {
     switch (token) {
     // open paren means child
     case '(':
-      expr.Child(ParseExpr());
+      expr.Push(ParseExpr());
       break;
     // close paren means we're done
     case ')':

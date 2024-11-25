@@ -41,6 +41,10 @@ struct WATExpr {
   }
 
   // push methods allow method chaining with current WATExpr
+  template <typename... Args> WATExpr &Push(Args &&...children) {
+    Push(std::forward<Args>(children)...);
+    return *this;
+  }
   template <typename T, typename... Args>
   WATExpr &Push(T &&child, Args &&...children) {
     Push(child);
@@ -52,13 +56,21 @@ struct WATExpr {
         WATChild{std::in_place_type<std::string>, std::string{child}});
     return *this;
   }
+  WATExpr &Push(WATExpr &child);
   WATExpr &Push(WATExpr &&child);
   WATExpr &Push(std::vector<WATExpr> &&children);
+
+  // helper method to disambiguate push call
+  // slightly nicer than Push(WATExpr{...})
+  template <typename... Args> WATExpr &PushChild(Args &&...children) {
+    Push(WATExpr{std::forward<Args>(children)...});
+    return *this;
+  }
 
   // child method allows method chaining with child WATExpr
   // from std::vector::emplace_back
   template <typename... Args> WATExpr &Child(Args &&...args) {
-    children.push_back(WATExpr(std::forward<Args>(args)...));
+    children.emplace_back(WATExpr(std::forward<Args>(args)...));
     return std::get<WATExpr>(children.back());
   }
 
