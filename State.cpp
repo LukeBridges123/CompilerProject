@@ -99,7 +99,7 @@ bool SymbolTable::CheckTypes(size_t function_id, std::vector<VarType> arg_types,
 
 size_t State::AddString(std::string const &literal) {
   size_t pos = string_pos;
-  string_pos += literal.size();
+  string_pos += literal.size() + 1;
   string_literals.push_back(literal);
   return pos;
 }

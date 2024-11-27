@@ -59,15 +59,13 @@ void WATWriter::Write(WATExpr const &expr) {
 
   curindent += INDENT;
 
-  /// write attributes inline iff we haven't written any child expressions
-  bool written_subexpr = false;
+  bool write_attr_inline = expr.format.inline_attrs;
   for (size_t i = 0; i < expr.children.size(); i++) {
     WATChild const &child = expr.children.at(i);
 
     if (std::holds_alternative<std::string>(child)) {
       // write an attribute
-      std::string separator =
-          (expr.format.inline_attrs && !written_subexpr) ? " " : Newline();
+      std::string separator = write_attr_inline ? " " : Newline();
       out << separator << std::get<std::string>(child);
     } else {
       // write a child expression
@@ -78,7 +76,8 @@ void WATWriter::Write(WATExpr const &expr) {
         NewlineWithComments();
       }
       Write(child_expr);
-      written_subexpr = true;
+      // if child expr is not written inline, then stop writing attrs inline
+      write_attr_inline &= child_expr.format.write_inline;
     }
   }
   curindent -= INDENT;

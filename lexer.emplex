@@ -10,7 +10,7 @@ ELSE else
 FUNCTION function
 RETURN return
 SCOPE_START \{
-TYPE "int"|"double"|"char"
+TYPE "int"|"double"|"char"|"string"
 BREAK "break"
 SCOPE_END \}
 OPEN_PARENTHESIS \(
