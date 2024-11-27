@@ -3,13 +3,25 @@
 #include "util.hpp"
 #include <limits>
 #include <optional>
+#include <ranges>
+#include <variant>
 
 // from https://en.cppreference.com/w/cpp/io/basic_istream/ignore
 constexpr auto max_size = std::numeric_limits<std::streamsize>::max();
 
-void WATExpr::AddChildren(std::vector<WATExpr> new_children) {
-  std::move(new_children.begin(), new_children.end(),
-            std::back_inserter(children));
+WATExpr &WATExpr::Push(WATExpr &child) {
+  children.push_back(WATChild{std::in_place_type<WATExpr>, child});
+  return *this;
+}
+
+WATExpr &WATExpr::Push(WATExpr &&child) {
+  children.push_back(WATChild{std::in_place_type<WATExpr>, std::move(child)});
+  return *this;
+}
+
+WATExpr &WATExpr::Push(std::vector<WATExpr> &&children) {
+  std::ranges::move(children, std::back_inserter(this->children));
+  return *this;
 }
 
 WATExpr &WATExpr::Inline() {
@@ -47,19 +59,26 @@ void WATWriter::Write(WATExpr const &expr) {
 
   curindent += INDENT;
 
-  // write attributes
-  std::string separator = expr.format.inline_attrs ? " " : Newline();
-  out << join(expr.attributes, separator, true);
-
-  /// write children
+  bool write_attr_inline = expr.format.inline_attrs;
   for (size_t i = 0; i < expr.children.size(); i++) {
-    WATExpr const &child = expr.children.at(i);
-    if (child.format.write_inline) {
-      out << " ";
+    WATChild const &child = expr.children.at(i);
+
+    if (std::holds_alternative<std::string>(child)) {
+      // write an attribute
+      std::string separator = write_attr_inline ? " " : Newline();
+      out << separator << std::get<std::string>(child);
     } else {
-      NewlineWithComments();
+      // write a child expression
+      WATExpr const &child_expr = std::get<WATExpr>(child);
+      if (child_expr.format.write_inline) {
+        out << " ";
+      } else {
+        NewlineWithComments();
+      }
+      Write(child_expr);
+      // if child expr is not written inline, then stop writing attrs inline
+      write_attr_inline &= child_expr.format.write_inline;
     }
-    Write(child);
   }
   curindent -= INDENT;
 
@@ -112,12 +131,12 @@ WATExpr WATParser::ParseExpr() {
     switch (token) {
     // open paren means child
     case '(':
-      expr.Child(ParseExpr());
+      expr.Push(ParseExpr());
       break;
     // close paren means we're done
     case ')':
       if (!attr.empty())
-        expr.attributes.push_back(std::string{attr});
+        expr.children.push_back(std::string{attr});
       return expr;
     // ignore everything after comment until newline
     case ';':
@@ -128,7 +147,7 @@ WATExpr WATParser::ParseExpr() {
     case ' ':
     case '\n':
       if (!attr.empty()) {
-        expr.attributes.push_back(std::string{attr});
+        expr.children.push_back(std::string{attr});
         attr.clear();
       }
       break;

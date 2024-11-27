@@ -50,9 +50,15 @@ public:
   ASTNode(Type type = EMPTY) : type(type) {};
   ASTNode(Type type, std::string literal) : type(type), literal(literal) {};
 
-  template <typename T>
-  ASTNode(Type type, T val) : type(type), value(Value(val)){};
-  ASTNode(Type type, size_t var_id) : type(type), var_id(var_id) {};
+  // these constructors may be confused for each other,
+  // so assert that they are only used for specific node types
+  ASTNode(Type type, Value &&value)
+      : type(type), value(std::make_optional(std::forward<Value>(value))) {
+    assert(type == LITERAL);
+  };
+  ASTNode(Type type, size_t var_id) : type(type), var_id(var_id) {
+    assert(type == IDENTIFIER || type == FUNCTION || type == FUNCTION_CALL);
+  };
 
   template <typename... Ts>
   ASTNode(Type type, std::string literal, Ts &&...children)
@@ -108,5 +114,5 @@ private:
   std::vector<WATExpr> EmitFunction(State &state) const;
   std::vector<WATExpr> EmitContinue(State &state) const;
   std::vector<WATExpr> EmitBreak(State &state) const;
-  std::vector<WATExpr> EmitFunctionCall(State & state) const;
+  std::vector<WATExpr> EmitFunctionCall(State &state) const;
 };

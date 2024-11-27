@@ -5,15 +5,17 @@
 #include <stdexcept>
 
 VarType::TypeId VarType::TypeFromValue(const Value &value) {
-  if (std::holds_alternative<int>(value.getVariant())) {
+  const ValueType variant = value.getVariant();
+  if (std::holds_alternative<int>(variant)) {
     return VarType::INT;
-  } else if (std::holds_alternative<double>(value.getVariant())) {
+  } else if (std::holds_alternative<double>(variant)) {
     return VarType::DOUBLE;
-  } else if (std::holds_alternative<char>(value.getVariant())) {
+  } else if (std::holds_alternative<char>(variant)) {
     return VarType::CHAR;
-  } else {
-    Error(value.line_declared, "Unknown type!");
+  } else if (std::holds_alternative<size_t>(variant)) {
+    return VarType::STRING;
   }
+  throw std::invalid_argument("Unknown value in variant");
 }
 
 VarType::TypeId VarType::TypeFromToken(const Token &token) {
@@ -24,6 +26,8 @@ VarType::TypeId VarType::TypeFromToken(const Token &token) {
     return VarType::CHAR;
   } else if (lexeme == "double") {
     return VarType::DOUBLE;
+  } else if (lexeme == "string") {
+    return VarType::STRING;
   } else {
     Error(token, "Unknown type ", lexeme);
   }
@@ -37,6 +41,8 @@ std::string VarType::TypeName() const {
     return "char";
   case VarType::DOUBLE:
     return "double";
+  case VarType::STRING:
+    return "string";
   default:
     throw std::invalid_argument("Attempt to access unknown type");
   }
@@ -46,6 +52,7 @@ std::string VarType::WATType() const {
   switch (id) {
   case VarType::INT:
   case VarType::CHAR:
+  case VarType::STRING:
     return "i32";
   case VarType::DOUBLE:
     return "f64";

@@ -15,8 +15,6 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
     return value.value().getType();
   case ASSIGN:
     assert(children.size() == 2);
-    // TODO: once assignment chaining is implemented, should be this:
-    // return children.at(1).ReturnType(table);
     return VarType::NONE;
   case OPERATION:
     // logical/comparison operators + modulus always return an int
@@ -121,30 +119,25 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
     return EmitContinue(state);
   case FUNCTION_CALL:
     return EmitFunctionCall(state);
-  case RETURN: {
+  case RETURN:
     assert(children.size() == 1);
-    WATExpr ret{"return"};
-    ret.AddChildren(children.at(0).Emit(state));
+    return WATExpr{"return", children.at(0).Emit(state)};
+  case CAST_INT: {
+    assert(children.size() == 1);
+    std::vector<WATExpr> ret = children.at(0).Emit(state);
+    if (children.at(0).ReturnType(state.table) == VarType::DOUBLE) {
+      ret.emplace_back("i32.trunc_f64_s");
+    }
     return ret;
   }
-  case CAST_INT:
+  case CAST_DOUBLE: {
     assert(children.size() == 1);
-    if (children.at(0).ReturnType(state.table) == VarType::DOUBLE) {
-      std::vector<WATExpr> ret = children.at(0).Emit(state);
-      ret.push_back(WATExpr{"i32.trunc_f64_s"});
-      return ret;
-    } else {
-      return children.at(0).Emit(state);
-    }
-  case CAST_DOUBLE:
-    assert(children.size() == 1);
+    std::vector<WATExpr> ret = children.at(0).Emit(state);
     if (children.at(0).ReturnType(state.table) == VarType::INT) {
-      std::vector<WATExpr> ret = children.at(0).Emit(state);
-      ret.push_back(WATExpr{"f64.convert_i32_s"});
-      return ret;
-    } else {
-      return children.at(0).Emit(state);
+      ret.emplace_back("f64.convert_i32_s");
     }
+    return ret;
+  }
   case CAST_CHAR:
     ErrorNoLine("Cast not implemented");
   case EMPTY:
@@ -159,38 +152,46 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
 WATExpr ASTNode::EmitModule(State &state) const {
   assert(type == ASTNode::MODULE);
   WATExpr out{"module"};
-  
+
   WATParser parser{internal_wat, internal_wat_len};
   std::vector<WATExpr> internal_funcs = parser.Parse();
   bool injected = false;
 
-  out.Child("memory", Variable("memory"), "1");
+  // write memory declaration and export
+  out.Child("memory", WATExpr("export", Quote("memory")).Inline(), "1");
+
+  // write string literals
+  size_t current_free = 0;
+  for (std::string const &literal : state.string_literals) {
+    out.Child("data")
+        .Push(WATExpr("i32.const", std::to_string(current_free)).Inline())
+        .Push(Quote(literal + "\\00"));
+    current_free += literal.size() + 1;
+  }
+
+  // write free memory position variable
   WATExpr &global = out.Child("global", Variable("_free")).Newline();
   global.Child("mut", "i32").Inline();
-  global.Child("i32.const", "0").Inline();
-  
+  global.Child("i32.const", std::to_string(state.string_pos)).Inline();
 
+  // generate function body
   for (ASTNode const &child : children) {
     // inject our functions before writing user-defined functions
     if (!injected && child.type == ASTNode::FUNCTION) {
-      out.AddChildren(internal_funcs);
+      out.Push(std::move(internal_funcs));
       injected = true;
     }
-  
 
-    out.AddChildren(child.Emit(state));
+    out.Push(child.Emit(state));
   }
 
-  
+  // generate exports for functions and memory
   for (FunctionInfo const &func : state.table.functions) {
     out.Child("export", Quote(func.name))
         .Child("func", Variable(func.name))
         .Inline();
   }
-  
-  out.Child("export", Quote("memory"))
-      .Child("memory", Variable("memory"))
-      .Inline();
+
   return out;
 }
 
@@ -207,9 +208,7 @@ std::vector<WATExpr> ASTNode::EmitScope(State &state) const {
   std::vector<WATExpr> new_scope{};
   for (ASTNode const &child : children) {
     std::vector<WATExpr> child_exprs = child.Emit(state);
-    for (WATExpr expr : child_exprs) {
-      new_scope.push_back(expr);
-    }
+    std::ranges::move(child_exprs, std::back_inserter(new_scope));
   }
   return new_scope;
 }
@@ -231,9 +230,10 @@ std::vector<WATExpr> ASTNode::EmitAssign(State &state) const {
   VarType left_type = children.at(0).ReturnType(state.table);
   VarType right_type = children.at(1).ReturnType(state.table);
   if (left_type == VarType::DOUBLE && right_type == VarType::INT) {
-    rvalue.push_back(WATExpr{"f64.convert_i32_s"});
+    rvalue.emplace_back("f64.convert_i32_s");
   }
-  return WATExpr{"local.set", {Variable("var", children[0].var_id)}, rvalue};
+  return WATExpr{"local.set", Variable("var", children[0].var_id),
+                 std::move(rvalue)};
 }
 
 std::vector<WATExpr> ASTNode::EmitChainAssign(State &state) const {
@@ -253,9 +253,10 @@ std::vector<WATExpr> ASTNode::EmitChainAssign(State &state) const {
   VarType left_type = children.at(0).ReturnType(state.table);
   VarType right_type = children.at(1).ReturnType(state.table);
   if (left_type == VarType::DOUBLE && right_type == VarType::INT) {
-    rvalue.push_back(WATExpr{"f64.convert_i32_s"});
+    rvalue.emplace_back("f64.convert_i32_s");
   }
-  return WATExpr{"local.tee", {Variable("var", children[0].var_id)}, rvalue};
+  return WATExpr{"local.tee", Variable("var", children[0].var_id),
+                 std::move(rvalue)};
 }
 
 std::vector<WATExpr>
@@ -273,12 +274,10 @@ std::vector<WATExpr> ASTNode::EmitConditional(State &state) const {
     if_then_else.Child("result", rettype.WATType()).Inline();
   }
 
-  WATExpr then = WATExpr{"then", {}, children[1].Emit(state)};
-  if_then_else.Child(then);
+  if_then_else.Child("then", children[1].Emit(state));
 
   if (children.size() == 3) {
-    WATExpr else_expr{"else", {}, children[2].Emit(state)};
-    if_then_else.Child(else_expr);
+    if_then_else.Child("else", children[2].Emit(state));
   }
   condition.push_back(if_then_else);
   return condition;
@@ -290,30 +289,20 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
   VarType left_type = children.at(0).ReturnType(state.table);
 
   if (literal == "!") {
-    WATExpr cond{"if"};
-    WATExpr ret_type{"result i32"};
-    WATExpr ret0{"then", "i32.const 0"};
-    WATExpr ret1{"else", "i32.const 1"};
-
-    cond.AddChildren({ret_type});
-    cond.AddChildren({ret0});
-    cond.AddChildren({ret1});
-
-    std::vector<WATExpr> expr = left;
-    expr.push_back(cond);
-    return expr;
+    WATExpr cond = WATExpr("if")
+                       .PushChild("result", "i32")
+                       .PushChild("then", WATExpr{"i32.const", "0"})
+                       .PushChild("else", WATExpr{"i32.const", "1"});
+    left.push_back(cond);
+    return left;
   } else if (literal == "-" && children.size() == 1) {
-    WATExpr expr{left_type.WATOperation("mul")};
-    WATExpr negative_one{left_type.WATOperation("const"), "-1"};
-    expr.AddChildren({negative_one});
-    expr.AddChildren(left);
-    return expr;
+    return WATExpr{left_type.WATOperation("mul"),
+                   WATExpr{left_type.WATOperation("const"), "-1"},
+                   std::move(left)};
   } else if (literal == "sqrt") {
-    WATExpr sqrt{"f64.sqrt"};
-    sqrt.AddChildren(left);
+    WATExpr sqrt{"f64.sqrt", std::move(left)};
     if (left_type == VarType::INT) {
-      WATExpr convert{"f64.convert_i32_s"};
-      sqrt.AddChildren(convert);
+      sqrt.Child("f64.convert_i32_s");
     }
 
     return sqrt;
@@ -326,49 +315,37 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
   VarType op_type = std::max(left_type, right_type);
 
   if (literal == "&&") {
-    WATExpr test_first{"i32.eq"};
-    test_first.AddChildren(left);
-    test_first.Child(WATExpr{"i32.const", "0"});
-
-    WATExpr test_second{"i32.ne"};
-    test_second.AddChildren(right);
-    test_second.Child(WATExpr{"i32.const", "0"});
-    WATExpr cond{"if"};
-    cond.Child(WATExpr{"result", "i32"});
-    cond.Child(WATExpr{"then", {}, WATExpr{"i32.const 0"}});
-    cond.Child(WATExpr{"else", {}, test_second});
+    WATExpr test_first{"i32.eq", WATExpr{"i32.const", "0"}, std::move(left)};
+    WATExpr test_second{"i32.ne", WATExpr{"i32.const", "0"}, std::move(right)};
+    WATExpr cond = WATExpr("if")
+                       .PushChild("result", "i32")
+                       .PushChild("then", WATExpr{"i32.const", "0"})
+                       .PushChild("else", std::move(test_second));
     return {test_first, cond};
   }
 
   if (literal == "||") {
-    WATExpr test_first{"i32.eq"};
-    test_first.AddChildren(left);
-    test_first.Child(WATExpr{"i32.const", "1"});
-
-    WATExpr test_second{"i32.ne"};
-    test_second.AddChildren(right);
-    test_second.Child(WATExpr{"i32.const", "0"});
-    WATExpr cond{"if"};
-    cond.Child(WATExpr{"result", "i32"});
-    cond.Child(WATExpr{"then", {}, WATExpr{"i32.const 1"}});
-    cond.Child(WATExpr{"else", {}, test_second});
+    WATExpr test_first{"i32.eq", WATExpr{"i32.const", "1"}, std::move(left)};
+    WATExpr test_second{"i32.ne", WATExpr{"i32.const", "0"}, std::move(right)};
+    WATExpr cond = WATExpr("if")
+                       .PushChild("result", "i32")
+                       .PushChild("then", WATExpr{"i32.const", "1"})
+                       .PushChild("else", std::move(test_second));
     return {test_first, cond};
   }
 
   std::string op_name = LITERAL_TO_WAT.at(literal);
-  // that second argument is there to duplicate the way that the previous
-  // code set "signed" to true for compare ops
-  WATExpr expr{op_type.WATOperation(
-      op_name, (literal == "<" || literal == ">" || literal == "<=" ||
-                literal == ">=" || literal == "/"))};
+  bool use_signed = (literal == "<" || literal == ">" || literal == "<=" ||
+                     literal == ">=" || literal == "/");
+  WATExpr expr{op_type.WATOperation(op_name, use_signed)};
 
-  expr.AddChildren(left);
+  expr.Push(std::move(left));
   if (left_type == VarType::INT && right_type == VarType::DOUBLE) {
-    expr.AddChildren(WATExpr{right_type.WATOperation("convert_i32_s")});
+    expr.Child(right_type.WATOperation("convert_i32_s"));
   }
-  expr.AddChildren(right);
+  expr.Push(std::move(right));
   if (right_type == VarType::INT && left_type == VarType::DOUBLE) {
-    expr.AddChildren(WATExpr{left_type.WATOperation("convert_i32_s")});
+    expr.Child(left_type.WATOperation("convert_i32_s"));
   }
 
   return expr;
@@ -390,15 +367,15 @@ std::vector<WATExpr> ASTNode::EmitWhile(State &state) const {
   WATExpr &loop = block.Child("loop", loop_id);
 
   // construct conditional
-  std::vector<WATExpr> condition = children.at(0).Emit(state);
   loop.Child("br_if", loop_exit)
       .Comment("Check while loop condition", false)
       .Child("i32.eqz")
       .Comment("Invert condition, break if condition false", false)
-      .AddChildren(condition);
+      .Push(children.at(0).Emit(state));
 
-  loop.AddChildren(children.at(1).Emit(state));
-  loop.Child("br", loop_id).Comment("Jump to start of while loop");
+  loop.Push(children.at(1).Emit(state))
+      .Child("br", loop_id)
+      .Comment("Jump to start of while loop");
 
   state.loop_idx.pop_back();
 
@@ -433,8 +410,7 @@ std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {
   }
 
   // add result to function
-  WATExpr result = WATExpr("result", info.rettype.WATType()).Inline();
-  function.Child(result);
+  function.Child("result", info.rettype.WATType()).Inline();
 
   // write out locals (remaining values in info.variables)
   for (size_t var_id : info.variables | std::views::drop(info.parameters)) {
@@ -444,20 +420,20 @@ std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {
   }
 
   for (ASTNode const &child : children) {
-    function.AddChildren(child.Emit(state));
+    function.Push(child.Emit(state));
   }
 
   return function;
 }
 
-std::vector<WATExpr> ASTNode::EmitFunctionCall(State & state) const {
+std::vector<WATExpr> ASTNode::EmitFunctionCall(State &state) const {
   std::vector<WATExpr> out{};
-  for (ASTNode const & child : children){
+  for (ASTNode const &child : children) {
     std::vector<WATExpr> child_exprs = child.Emit(state);
-    for (auto expr : child_exprs){
+    for (auto expr : child_exprs) {
       out.push_back(expr);
     }
   }
-  out.push_back(WATExpr{"call", std::string{"$"} + state.table.functions.at(var_id).name});
+  out.emplace_back("call", Variable(state.table.functions.at(var_id).name));
   return out;
 }

@@ -5,7 +5,7 @@
 #include <type_traits>
 #include <variant>
 
-using ValueType = std::variant<int, double, char>;
+using ValueType = std::variant<int, double, char, size_t>;
 
 class Value {
 private:
@@ -21,8 +21,8 @@ public:
 
   template <typename T> Value(T &&val) : value(std::forward<T>(val)){};
 
-  // Constructor for variable declaration without value
-  // Value(Type type, size_t line);
+  Value(Value const &) = default;
+  Value(Value &&) = default;
 
   // Returns the variant
   const ValueType getVariant() const { return value; };
