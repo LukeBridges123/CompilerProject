@@ -80,11 +80,8 @@ bool SymbolTable::CheckTypes(size_t function_id, std::vector<VarType> arg_types,
                              size_t line_num) const {
   assert(function_id < functions.size());
 
-  if (functions.at(function_id).variables.size() < arg_types.size()) {
-    Error(line_num, "Called function with too many arguments");
-  }
-  if (functions.at(function_id).variables.size() > arg_types.size()) {
-    Error(line_num, "Called function with too few arguments");
+  if (functions.at(function_id).parameters != arg_types.size()) {
+    Error(line_num, std::format("Called function with {} arguments, expected {}", arg_types.size(), functions.at(function_id).variables.size()));
   }
 
   for (size_t i = 0; i < arg_types.size(); i++) {
