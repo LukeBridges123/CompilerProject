@@ -310,6 +310,14 @@ private:
     std::string name = ConsumeToken().lexeme;
 
     if (IfToken(Lexer::ID_OPEN_PARENTHESIS)) { // treat as a function call
+      if (name == "size"){
+        ASTNode out{ASTNode::BUILT_IN_FUNCTION_CALL, name};
+        ASTNode arg = ParseExpr();
+        out.AddChild(std::move(arg));
+        assert(arg.ReturnType(state.table) == VarType::STRING);
+        ExpectToken(Lexer::ID_CLOSE_PARENTHESIS);
+        return out;
+      }
       size_t id = state.table.FindFunction(name, CurToken().line_id);
       ASTNode out{ASTNode::FUNCTION_CALL, id};
 

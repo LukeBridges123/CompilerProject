@@ -119,6 +119,8 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
     return EmitContinue(state);
   case FUNCTION_CALL:
     return EmitFunctionCall(state);
+  case BUILT_IN_FUNCTION_CALL:
+    return EmitBuiltInFunctionCall(state);
   case RETURN:
     assert(children.size() == 1);
     return WATExpr{"return", children.at(0).Emit(state)};
@@ -450,4 +452,19 @@ std::vector<WATExpr> ASTNode::EmitFunctionCall(State &state) const {
   }
   out.emplace_back("call", Variable(state.table.functions.at(var_id).name));
   return out;
+}
+
+std::vector<WATExpr> ASTNode::EmitBuiltInFunctionCall(State & state) const {
+  std::vector<WATExpr> out{};
+  if (literal == "size"){
+    assert(children.size() == 1);
+    std::vector<WATExpr> child_exprs = children[0].Emit(state);
+    for (auto expr : child_exprs) {
+      out.push_back(expr);
+    }
+    out.emplace_back("call", Variable("getStringLength"));
+    return out;
+  } else {
+    ErrorNoLine("Unknown built in function");
+  }
 }
