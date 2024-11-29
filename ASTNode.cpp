@@ -154,11 +154,9 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
 WATExpr ASTNode::EmitModule(State &state) const {
   assert(type == ASTNode::MODULE);
   WATExpr out{"module"};
-
   WATParser parser{internal_wat, internal_wat_len};
   std::vector<WATExpr> internal_funcs = parser.Parse();
   bool injected = false;
-
   // write memory declaration and export
   out.Child("memory", WATExpr("export", Quote("memory")).Inline(), "1");
 
@@ -170,7 +168,7 @@ WATExpr ASTNode::EmitModule(State &state) const {
         .Push(Quote(literal + "\\00"));
     current_free += literal.size() + 1;
   }
-
+  
   // write free memory position variable
   WATExpr &global = out.Child("global", Variable("_free")).Newline();
   global.Child("mut", "i32").Inline();
