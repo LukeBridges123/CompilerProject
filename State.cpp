@@ -1,5 +1,6 @@
 #include <iterator>
 #include <stdexcept>
+#include <format>
 
 #include "Error.hpp"
 #include "State.hpp"

@@ -209,9 +209,9 @@ ASTNode::EmitLiteral([[maybe_unused]] State &symbols) const {
 std::vector<WATExpr> ASTNode::EmitCastString(State &state) const {
   assert(children.size() == 1);
 
-  auto val = std::visit(
-      [](auto &&value) { return value; }, children.at(0).value->getValue());
-  size_t string_pos = state.AddString(std::to_string(val));
+  // auto val = std::visit(
+  //     [](auto &&value) { return value; }, children.at(0).value-);
+  size_t string_pos = state.AddString(children.at(0).value->toString());
   
   ASTNode node = ASTNode{ASTNode::LITERAL, Value{string_pos}};
   
