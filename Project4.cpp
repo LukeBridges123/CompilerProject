@@ -296,6 +296,12 @@ private:
       return out;
     }
 
+    if (token.lexeme == ":string") {
+      ASTNode out{ASTNode::Cast_STRING};
+      out.AddChildren(std::move(node));
+      return out;
+    }
+
     Error(token, "Attempt to cast to unknown type ", token.lexeme.substr(1));
   }
 
@@ -347,6 +353,8 @@ private:
       return ConstructLiteral(ConsumeToken().lexeme[1]);
     case Lexer::ID_ID:
       return CheckTypeCast(ParseIdentifier());
+    case Lexer::ID_STRING:
+      return CheckTypeCast(ParseString());
     case Lexer::ID_OPEN_PARENTHESIS: {
       ExpectToken(Lexer::ID_OPEN_PARENTHESIS);
       ASTNode subexpression = ParseExpr();
@@ -369,8 +377,6 @@ private:
       ExpectToken(Lexer::ID_CLOSE_PARENTHESIS);
       return CheckTypeCast(std::move(subexpr));
     }
-    case Lexer::ID_STRING:
-      return ParseString();
     default:
       ErrorUnexpected(current);
     }

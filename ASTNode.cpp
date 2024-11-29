@@ -138,6 +138,8 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
     }
     return ret;
   }
+  case Cast_STRING:
+    return EmitCastString(state);
   case CAST_CHAR:
     ErrorNoLine("Cast not implemented");
   case EMPTY:
@@ -202,6 +204,20 @@ ASTNode::EmitLiteral([[maybe_unused]] State &symbols) const {
   return WATExpr(value->getType().WATOperation("const"), value_str)
       .Comment("Literal value")
       .Inline();
+}
+
+std::vector<WATExpr> ASTNode::EmitCastString(State &state) const {
+  assert(children.size() == 1);
+
+  auto val = std::visit(
+      [](auto &&value) { return value; }, children.at(0).value->getValue());
+  size_t string_pos = state.AddString(std::to_string(val));
+  
+  ASTNode node = ASTNode{ASTNode::LITERAL, Value{string_pos}};
+  
+  std::vector<WATExpr> ret = node.Emit(state);
+
+  return ret;
 }
 
 std::vector<WATExpr> ASTNode::EmitScope(State &state) const {

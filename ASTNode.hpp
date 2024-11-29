@@ -31,6 +31,7 @@ public:
     CAST_CHAR,
     CAST_DOUBLE,
     CAST_INT,
+    Cast_STRING,
     WHILE,
     FUNCTION,
     RETURN,
@@ -104,6 +105,7 @@ private:
 
   std::vector<WATExpr> Emit(State &state) const;
   std::vector<WATExpr> EmitLiteral(State &state) const;
+  std::vector<WATExpr> EmitCastString(State &state) const;
   std::vector<WATExpr> EmitScope(State &state) const;
   std::vector<WATExpr> EmitAssign(State &state) const;
   std::vector<WATExpr> EmitChainAssign(State &state) const;
