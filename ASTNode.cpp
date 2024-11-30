@@ -58,6 +58,8 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
     return VarType::INT;
   case CAST_CHAR:
     return VarType::CHAR;
+  case CAST_STRING:
+    return VarType::STRING;
   case RETURN:
     assert(children.size() == 1);
     return children.at(0).ReturnType(table);
@@ -140,8 +142,16 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
     }
     return ret;
   }
-  case Cast_STRING:
-    return EmitCastString(state);
+  case CAST_STRING: {
+    std::vector<WATExpr> out;
+    assert(children.size() == 1);
+    std::vector<WATExpr> child_exprs = children[0].Emit(state);
+    for (auto expr : child_exprs) {
+      out.push_back(expr);
+    }
+    out.emplace_back("call", Variable("charTo_str"));
+    return out;
+  }
   case CAST_CHAR:
     ErrorNoLine("Cast not implemented");
   case EMPTY:
@@ -197,8 +207,7 @@ WATExpr ASTNode::EmitModule(State &state) const {
   return out;
 }
 
-std::vector<WATExpr>
-ASTNode::EmitLiteral([[maybe_unused]] State &symbols) const {
+std::vector<WATExpr> ASTNode::EmitLiteral([[maybe_unused]] State &symbols) const {
   std::string value_str = std::visit(
       [](auto &&value) { return std::format("{}", value); }, value->getValue());
   return WATExpr(value->getType().WATOperation("const"), value_str)
@@ -206,17 +215,6 @@ ASTNode::EmitLiteral([[maybe_unused]] State &symbols) const {
       .Inline();
 }
 
-std::vector<WATExpr> ASTNode::EmitCastString(State &state) const {
-  assert(children.size() == 1);
-
-  size_t string_pos = state.AddString(children.at(0).value->toString());
-  
-  ASTNode node = ASTNode{ASTNode::LITERAL, Value{string_pos}};
-  
-  std::vector<WATExpr> ret = node.Emit(state);
-
-  return ret;
-}
 
 std::vector<WATExpr> ASTNode::EmitScope(State &state) const {
   std::vector<WATExpr> new_scope{};
