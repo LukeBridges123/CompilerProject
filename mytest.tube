@@ -1,0 +1,7 @@
+function HelloLength() : int {
+    int a = 10;
+    return a:string;
+}
+
+// Appending string literals.
+function HelloPlus() : string { return "Hello" + " World!"; }

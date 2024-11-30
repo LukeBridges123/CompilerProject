@@ -209,8 +209,6 @@ ASTNode::EmitLiteral([[maybe_unused]] State &symbols) const {
 std::vector<WATExpr> ASTNode::EmitCastString(State &state) const {
   assert(children.size() == 1);
 
-  // auto val = std::visit(
-  //     [](auto &&value) { return value; }, children.at(0).value-);
   size_t string_pos = state.AddString(children.at(0).value->toString());
   
   ASTNode node = ASTNode{ASTNode::LITERAL, Value{string_pos}};
@@ -348,6 +346,33 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
                        .PushChild("then", WATExpr{"i32.const", "1"})
                        .PushChild("else", std::move(test_second));
     return {test_first, cond};
+  }
+
+  if (left_type == VarType::STRING && right_type == VarType::STRING && literal == "+") {
+    WATExpr out{"call", Variable("addTwo_str")};
+    out.Push(std::move(left));
+    out.Push(std::move(right));
+
+    return out;
+  }
+  else if (left_type == VarType::STRING || right_type == VarType::STRING){
+    WATExpr chr{"call", Variable("charTo_str")};
+    WATExpr out{"call", Variable("addTwo_str")};
+    if (left_type == VarType::CHAR) {
+      chr.Push(std::move(left));
+      out.Push(chr);
+      // chr.Push(std::move(left));
+      out.Push(std::move(right));
+    } else if (right_type == VarType::CHAR) {
+      chr.Push(std::move(right));
+      out.Push(chr);
+      // chr.Push(std::move(right));
+      out.Push(std::move(left));
+    } else {
+      ErrorNoLine("Invalid action: Cannot perfom addition with a string and a non-string!");
+    }
+
+    return out;
   }
 
   std::string op_name = LITERAL_TO_WAT.at(literal);

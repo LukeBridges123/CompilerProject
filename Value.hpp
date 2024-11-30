@@ -52,10 +52,10 @@ public:
 
   std::string toString() const {
         return std::visit([](const auto& arg) -> std::string {
-            if constexpr (std::is_same_v<decltype(arg), char>) {
-                return std::string(1, arg); // Convert char to a string
+            if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, char>) {
+              return std::string(1, arg); // Convert char to a string
             } else {
-                return std::to_string(arg); // Use std::to_string for numbers
+              return std::to_string(arg); // Use std::to_string for numbers
             }
         }, value);
     }
