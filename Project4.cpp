@@ -297,7 +297,7 @@ private:
     }
 
     if (token.lexeme == ":string") {
-      ASTNode out{ASTNode::Cast_STRING};
+      ASTNode out{ASTNode::CAST_STRING};
       out.AddChildren(std::move(node));
       return out;
     }
