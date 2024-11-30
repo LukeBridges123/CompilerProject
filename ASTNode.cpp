@@ -364,10 +364,11 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
       // chr.Push(std::move(left));
       out.Push(std::move(right));
     } else if (right_type == VarType::CHAR) {
-      chr.Push(std::move(right));
-      out.Push(chr);
       // chr.Push(std::move(right));
       out.Push(std::move(left));
+      chr.Push(std::move(right)); // reordered -- it matters which argument to addTwo_str goes first, 
+                                  // and presumably the left arg always goes before the right
+      out.Push(chr);
     } else {
       ErrorNoLine("Invalid action: Cannot perfom addition with a string and a non-string!");
     }

@@ -118,7 +118,7 @@
   (call $_str_alloc)
 
   (local.get $char)
-  (i32.load8_u)
+  ;;(i32.load8_u) this shouldn't be here--we need to store in the newly allocated memory, not access what's there
 
   (i32.store8)
 )
