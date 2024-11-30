@@ -92,9 +92,9 @@ void WATWriter::Write(WATExpr const &expr) {
 }
 
 WATParser::WATParser(unsigned char *array, size_t length) {
-  // pubsetbuf trick from https://stackoverflow.com/a/7781958/4678913
-  // rose: not sure if this reinterpret cast is legal but it works <3
-  in.rdbuf()->pubsetbuf(reinterpret_cast<char *>(array), length);
+  std::string wat; 
+  std::copy(array, array + length, std::back_inserter(wat));
+  in = std::istringstream{wat};
 }
 
 // rose:

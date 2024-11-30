@@ -41,3 +41,7 @@ compile_flags.txt
 .vscode
 *_wat.hpp
 .gdb_history
+
+.idea
+
+.tube

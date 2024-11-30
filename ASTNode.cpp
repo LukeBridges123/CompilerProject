@@ -58,6 +58,8 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
     return VarType::INT;
   case CAST_CHAR:
     return VarType::CHAR;
+  case CAST_STRING:
+    return VarType::STRING;
   case RETURN:
     assert(children.size() == 1);
     return children.at(0).ReturnType(table);
@@ -119,6 +121,8 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
     return EmitContinue(state);
   case FUNCTION_CALL:
     return EmitFunctionCall(state);
+  case BUILT_IN_FUNCTION_CALL:
+    return EmitBuiltInFunctionCall(state);
   case RETURN:
     assert(children.size() == 1);
     return WATExpr{"return", children.at(0).Emit(state)};
@@ -138,6 +142,16 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
     }
     return ret;
   }
+  case CAST_STRING: {
+    std::vector<WATExpr> out;
+    assert(children.size() == 1);
+    std::vector<WATExpr> child_exprs = children[0].Emit(state);
+    for (auto expr : child_exprs) {
+      out.push_back(expr);
+    }
+    out.emplace_back("call", Variable("charTo_str"));
+    return out;
+  }
   case CAST_CHAR:
     ErrorNoLine("Cast not implemented");
   case EMPTY:
@@ -152,11 +166,9 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
 WATExpr ASTNode::EmitModule(State &state) const {
   assert(type == ASTNode::MODULE);
   WATExpr out{"module"};
-
   WATParser parser{internal_wat, internal_wat_len};
   std::vector<WATExpr> internal_funcs = parser.Parse();
   bool injected = false;
-
   // write memory declaration and export
   out.Child("memory", WATExpr("export", Quote("memory")).Inline(), "1");
 
@@ -168,7 +180,7 @@ WATExpr ASTNode::EmitModule(State &state) const {
         .Push(Quote(literal + "\\00"));
     current_free += literal.size() + 1;
   }
-
+  
   // write free memory position variable
   WATExpr &global = out.Child("global", Variable("_free")).Newline();
   global.Child("mut", "i32").Inline();
@@ -195,14 +207,14 @@ WATExpr ASTNode::EmitModule(State &state) const {
   return out;
 }
 
-std::vector<WATExpr>
-ASTNode::EmitLiteral([[maybe_unused]] State &symbols) const {
+std::vector<WATExpr> ASTNode::EmitLiteral([[maybe_unused]] State &symbols) const {
   std::string value_str = std::visit(
       [](auto &&value) { return std::format("{}", value); }, value->getValue());
   return WATExpr(value->getType().WATOperation("const"), value_str)
       .Comment("Literal value")
       .Inline();
 }
+
 
 std::vector<WATExpr> ASTNode::EmitScope(State &state) const {
   std::vector<WATExpr> new_scope{};
@@ -334,6 +346,34 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     return {test_first, cond};
   }
 
+  if (left_type == VarType::STRING && right_type == VarType::STRING && literal == "+") {
+    WATExpr out{"call", Variable("addTwo_str")};
+    out.Push(std::move(left));
+    out.Push(std::move(right));
+
+    return out;
+  }
+  else if (left_type == VarType::STRING || right_type == VarType::STRING){
+    WATExpr chr{"call", Variable("charTo_str")};
+    WATExpr out{"call", Variable("addTwo_str")};
+    if (left_type == VarType::CHAR) {
+      chr.Push(std::move(left));
+      out.Push(chr);
+      // chr.Push(std::move(left));
+      out.Push(std::move(right));
+    } else if (right_type == VarType::CHAR) {
+      // chr.Push(std::move(right));
+      out.Push(std::move(left));
+      chr.Push(std::move(right)); // reordered -- it matters which argument to addTwo_str goes first, 
+                                  // and presumably the left arg always goes before the right
+      out.Push(chr);
+    } else {
+      ErrorNoLine("Invalid action: Cannot perfom addition with a string and a non-string!");
+    }
+
+    return out;
+  }
+
   std::string op_name = LITERAL_TO_WAT.at(literal);
   bool use_signed = (literal == "<" || literal == ">" || literal == "<=" ||
                      literal == ">=" || literal == "/");
@@ -436,4 +476,19 @@ std::vector<WATExpr> ASTNode::EmitFunctionCall(State &state) const {
   }
   out.emplace_back("call", Variable(state.table.functions.at(var_id).name));
   return out;
+}
+
+std::vector<WATExpr> ASTNode::EmitBuiltInFunctionCall(State & state) const {
+  std::vector<WATExpr> out{};
+  if (literal == "size"){
+    assert(children.size() == 1);
+    std::vector<WATExpr> child_exprs = children[0].Emit(state);
+    for (auto expr : child_exprs) {
+      out.push_back(expr);
+    }
+    out.emplace_back("call", Variable("getStringLength"));
+    return out;
+  } else {
+    ErrorNoLine("Unknown built in function");
+  }
 }
