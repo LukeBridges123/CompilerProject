@@ -346,12 +346,29 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     return {test_first, cond};
   }
 
-  if (left_type == VarType::STRING && right_type == VarType::STRING && literal == "+") {
-    WATExpr out{"call", Variable("addTwo_str")};
-    out.Push(std::move(left));
-    out.Push(std::move(right));
+  if (left_type == VarType::STRING && right_type == VarType::STRING) {
+    if (literal == "+") {
+      WATExpr out{"call", Variable("addTwo_str")};
+      out.Push(std::move(left));
+      out.Push(std::move(right));
 
-    return out;
+      return out;
+    } else if (literal == "==") {
+      WATExpr out{"call", Variable("str_eq")};
+      out.Push(std::move(left));
+      out.Push(std::move(right));
+      return out;
+    } else if (literal == "!=") {
+      WATExpr eq{"call", Variable("str_eq")};
+      eq.Push(std::move(left));
+      eq.Push(std::move(right));
+      WATExpr out{"i32.eq"};
+      out.Child(std::move(eq));
+      out.Child(WATExpr{"i32.const", "0"});
+      return out;
+    } else {
+      ErrorNoLine("Unknown operation on two strings");
+    }
   }
   else if (left_type == VarType::STRING || right_type == VarType::STRING){
     WATExpr chr{"call", Variable("charTo_str")};

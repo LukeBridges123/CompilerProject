@@ -122,3 +122,46 @@
 
   (i32.store8)
 )
+
+(func $char_at (param $str i32) (param $index i32) (result i32)
+  (local.get $str)
+  (local.get $index)
+  (i32.add) 
+
+  (i32.load8_u)
+
+  (return)
+)
+
+(func $str_eq (param $str1 i32) (param $str2 i32) (result i32)
+  (local $len1 i32)
+  (local $len2 i32)
+  (local $i i32)
+
+  (local.get $str1)
+  (call $getStringLength)
+  (local.set $len1)
+
+  (local.get $str2)
+  (call $getStringLength)
+  (local.set $len2)
+  
+  (i32.ne (local.get $len1) (local.get $len2))
+
+  (if 
+    (then (return (i32.const 0))))
+  (block $exit
+    (loop $compare_loop
+      (i32.ge_s (local.get $i) (local.get $len1))
+      (br_if $exit)
+      (i32.ne (call $char_at (local.get $str1) (local.get $i))
+              (call $char_at (local.get $str2) (local.get $i)))
+      (if
+          (then (return (i32.const 0))))
+      (i32.add (local.get $i) (i32.const 1))
+      (local.set $i)
+      (br $compare_loop)
+    )
+  )
+  (return (i32.const 1))
+)
