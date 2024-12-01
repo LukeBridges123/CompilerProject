@@ -225,7 +225,7 @@ std::vector<WATExpr> ASTNode::EmitScope(State &state) const {
   return new_scope;
 }
 
-std::vector<WATExpr> ASTNode::EmitAssign(State &state) const {
+std::vector<WATExpr> ASTNode::EmitAssign(State &state, bool chain) const {
   assert(children.size() == 2);
   assert(children[0].type == IDENTIFIER);
 
@@ -234,7 +234,7 @@ std::vector<WATExpr> ASTNode::EmitAssign(State &state) const {
   std::vector<WATExpr> rvalue;
 
   if (children.at(1).type == ASSIGN) {
-    rvalue = children.at(1).EmitChainAssign(state);
+    rvalue = children.at(1).EmitAssign(state, true);
   } else {
     rvalue = children.at(1).Emit(state);
   }
@@ -244,30 +244,7 @@ std::vector<WATExpr> ASTNode::EmitAssign(State &state) const {
   if (left_type == VarType::DOUBLE && right_type == VarType::INT) {
     rvalue.emplace_back("f64.convert_i32_s");
   }
-  return WATExpr{"local.set", Variable("var", children[0].var_id),
-                 std::move(rvalue)};
-}
-
-std::vector<WATExpr> ASTNode::EmitChainAssign(State &state) const {
-  assert(children.size() == 2);
-  assert(children[0].type == IDENTIFIER);
-
-  // this should produce some code which, when run, leaves the
-  // rvalue on the stack
-  std::vector<WATExpr> rvalue;
-
-  if (children.at(1).type == ASSIGN) {
-    rvalue = children.at(1).EmitChainAssign(state);
-  } else {
-    rvalue = children.at(1).Emit(state);
-  }
-
-  VarType left_type = children.at(0).ReturnType(state.table);
-  VarType right_type = children.at(1).ReturnType(state.table);
-  if (left_type == VarType::DOUBLE && right_type == VarType::INT) {
-    rvalue.emplace_back("f64.convert_i32_s");
-  }
-  return WATExpr{"local.tee", Variable("var", children[0].var_id),
+  return WATExpr{(chain ? "local.tee" : "local.set"), Variable("var", children[0].var_id),
                  std::move(rvalue)};
 }
 
