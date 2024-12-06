@@ -352,8 +352,13 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     out.Push(std::move(right));
 
     return out;
-  }
-  else if (left_type == VarType::STRING || right_type == VarType::STRING){
+  } else if (left_type == VarType::STRING || right_type == VarType::STRING){
+    if (left_type == VarType::INT && literal == "*"){
+      return EmitMuilply(std::move(right), std::move(left));
+    } else if (right_type == VarType::INT && literal == "*") {
+      return EmitMuilply(std::move(left), std::move(right));
+    }
+
     WATExpr chr{"call", Variable("charTo_str")};
     WATExpr out{"call", Variable("addTwo_str")};
     if (left_type == VarType::CHAR) {
@@ -370,9 +375,12 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     } else {
       ErrorNoLine("Invalid action: Cannot perfom addition with a string and a non-string!");
     }
-
     return out;
-  }
+  } else if (left_type == VarType::CHAR && right_type == VarType::INT){
+     return EmitMuilply(std::move(left), std::move(right));
+   } else if (left_type == VarType::INT && right_type == VarType::CHAR){
+     return EmitMuilply(std::move(right), std::move(left));
+   }
 
   std::string op_name = LITERAL_TO_WAT.at(literal);
   bool use_signed = (literal == "<" || literal == ">" || literal == "<=" ||
@@ -389,6 +397,10 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
   }
 
   return expr;
+}
+
+std::vector<WATExpr> ASTNode::EmitMuilply(std::vector<WATExpr> content, std::vector<WATExpr> mul) const {
+  return WATExpr{"Call"};
 }
 
 std::vector<WATExpr> ASTNode::EmitWhile(State &state) const {
@@ -483,6 +495,10 @@ std::vector<WATExpr> ASTNode::EmitBuiltInFunctionCall(State & state) const {
   if (literal == "size"){
     assert(children.size() == 1);
     std::vector<WATExpr> child_exprs = children[0].Emit(state);
+    VarType child_type = children.at(0).ReturnType(state.table);
+    if (child_type != VarType::STRING) {
+      ErrorNoLine("Invalid: Attempting to us size() on a non-string type.");
+    }
     for (auto expr : child_exprs) {
       out.push_back(expr);
     }

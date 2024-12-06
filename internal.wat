@@ -122,3 +122,44 @@
 
   (i32.store8)
 )
+
+(func $multply_str (param $str i32) (param $times i32) (result i32)
+  (local $res_val i32)   ;; Return value
+  (local $mem_ptr i32)
+
+  (local.get $str)
+  (call $getStringLength)
+
+  (local.get $times)
+  
+  (i32.mul)
+  (call $_str_alloc)
+
+  (local.set $mem_ptr)
+  (local.get $mem_ptr)
+  (local.set $res_val)  ;;Assigning return value
+
+  (block $exit1 ;; Outer block
+    (loop $loop
+      (local.get $times)
+      (i32.eqz)        
+      (br_if $exit1)
+
+      (local.get $mem_ptr)
+      (local.get $str)
+      (call $copyStr)
+
+      (local.set $mem_ptr)
+
+      (local.get $times)
+      (i32.const 1)
+      (i32.sub)
+      (local.set $times)
+      
+      ;; Continue the loop
+      (br $loop)
+    )
+  )
+
+  (local.get $res_val)
+)

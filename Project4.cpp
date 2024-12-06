@@ -224,10 +224,15 @@ private:
       std::string operation = ConsumeToken().lexeme;
       ASTNode rhs = ParseTerm();
 
-      if (lhs->ReturnType(state.table) == VarType::CHAR ||
-          rhs.ReturnType(state.table) == VarType::CHAR) {
+      
+      if (isStringOrChar(std::move(*lhs)) && isStringOrChar(std::move(rhs))) {
         Error(CurToken(), "Invalid action: Cannot perform multiplication, "
-                          "division, or modulus with a char type!");
+                          "division, or modulus on a char or a string with another char or string!");
+      } else if ((isStringOrChar(std::move(*lhs)) || isStringOrChar(std::move(rhs))) &&
+               operation != "*")
+      {
+        Error(CurToken(), "Invalid action: Cannot perform "
+                          "division, or modulus on a char or string type!");
       }
 
       if (operation == "%" &&
@@ -241,6 +246,14 @@ private:
                                               std::move(*lhs), std::move(rhs)));
     }
     return ASTNode{std::move(*lhs)};
+  }
+
+  bool isStringOrChar(ASTNode node) {
+    if (node.ReturnType(state.table) == VarType::CHAR || 
+        node.ReturnType(state.table) == VarType::STRING) {
+      return true;
+    }
+    return false;
   }
 
   ASTNode ParseNegate() {
