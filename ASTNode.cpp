@@ -376,9 +376,9 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
       ErrorNoLine("Invalid action: Cannot perfom addition with a string and a non-string!");
     }
     return out;
-  } else if (left_type == VarType::CHAR && right_type == VarType::INT){
+  } else if (left_type == VarType::CHAR && right_type == VarType::INT && literal == "*"){
      return EmitMuilply(std::move(left), std::move(right));
-   } else if (left_type == VarType::INT && right_type == VarType::CHAR){
+   } else if (left_type == VarType::INT && right_type == VarType::CHAR && literal == "*"){
      return EmitMuilply(std::move(right), std::move(left));
    }
 
