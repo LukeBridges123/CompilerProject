@@ -382,14 +382,15 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
      return EmitMuilply(std::move(right), std::move(left));
    }
 
-  std::string op_name = LITERAL_TO_WAT.at(literal);
-  bool use_signed = (literal == "<" || literal == ">" || literal == "<=" ||
-                     literal == ">=" || literal == "/");
-  WATExpr expr{op_type.WATOperation(op_name, use_signed)};
+   std::string op_name = LITERAL_TO_WAT.at(literal);
+   bool use_signed = (literal == "<" || literal == ">" || literal == "<=" ||
+                      literal == ">=" || literal == "/");
+   WATExpr expr{op_type.WATOperation(op_name, use_signed)};
 
-  expr.Push(std::move(left));
-  if (left_type == VarType::INT && right_type == VarType::DOUBLE) {
-    expr.Child(right_type.WATOperation("convert_i32_s"));
+   expr.Push(std::move(left));
+   if (left_type == VarType::INT && right_type == VarType::DOUBLE)
+   {
+     expr.Child(right_type.WATOperation("convert_i32_s"));
   }
   expr.Push(std::move(right));
   if (right_type == VarType::INT && left_type == VarType::DOUBLE) {
@@ -471,8 +472,18 @@ std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {
         .Comment("Declare " + var.type_var.TypeName() + " " + var.name);
   }
 
+  int returnCount = 0;
   for (ASTNode const &child : children) {
+    if (returnCount > 0) {
+      ErrorNoLine("Function ", info.name,
+                " shouldn't do anything after a return statement.");
+    }
+
     function.Push(child.Emit(state));
+    
+    if (child.type == ASTNode::RETURN) {
+      returnCount += 1;
+    }
   }
 
   return function;

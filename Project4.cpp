@@ -233,6 +233,10 @@ private:
       {
         Error(CurToken(), "Invalid action: Cannot perform "
                           "division, or modulus on a char or string type!");
+      } else if ((isStringOrChar(std::move(*lhs)) || isStringOrChar(std::move(rhs))) &&
+               (lhs->ReturnType(state.table) == VarType::DOUBLE || rhs.ReturnType(state.table) == VarType::DOUBLE)) {
+        Error(CurToken(), "Invalid action: Cannot perform "
+                          "operation on a char or string type with a double!");
       }
 
       if (operation == "%" &&
