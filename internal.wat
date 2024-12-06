@@ -163,3 +163,11 @@
 
   (local.get $res_val)
 )
+
+(func $index_str (param $str i32) (param $index i32) (result i32)
+  (local.get $str)
+  (local.get $index)
+  (i32.add)
+
+  (i32.load8_u)
+)

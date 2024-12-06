@@ -367,6 +367,19 @@ private:
     return CheckTypeCast(ASTNode(ASTNode::LITERAL, Value{value}));
   }
 
+  ASTNode String_ops(ASTNode node) {
+    if (CurToken() == Lexer::ID_TYPE_CAST) {
+      return CheckTypeCast(std::move(node));
+    } else if (CurToken() == Lexer::ID_BRACKET_OPEN) {
+      ExpectToken(Lexer::ID_BRACKET_OPEN);
+      ASTNode subexpression = ParseExpr();
+      ExpectToken(Lexer::ID_BRACKET_CLOSE);
+      return ASTNode{ASTNode::BUILT_IN_FUNCTION_CALL, "at", std::move(node),std::move(subexpression)};
+    }
+
+    return node;
+  }
+
   ASTNode ParseTerm() {
     Token const &current = CurToken();
     switch (current) {
@@ -377,14 +390,14 @@ private:
     case Lexer::ID_CHAR:
       return ConstructLiteral(ConsumeToken().lexeme[1]);
     case Lexer::ID_ID:
-      return CheckTypeCast(ParseIdentifier());
+      return String_ops(ParseIdentifier());
     case Lexer::ID_STRING:
       return CheckTypeCast(ParseString());
     case Lexer::ID_OPEN_PARENTHESIS: {
       ExpectToken(Lexer::ID_OPEN_PARENTHESIS);
       ASTNode subexpression = ParseExpr();
       ExpectToken(Lexer::ID_CLOSE_PARENTHESIS);
-      return CheckTypeCast(std::move(subexpression));
+      return String_ops(std::move(subexpression));
     }
     case Lexer::ID_MATH:
       if (current.lexeme == "-") {

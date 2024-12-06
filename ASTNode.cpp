@@ -502,8 +502,8 @@ std::vector<WATExpr> ASTNode::EmitFunctionCall(State &state) const {
 }
 
 std::vector<WATExpr> ASTNode::EmitBuiltInFunctionCall(State & state) const {
-  std::vector<WATExpr> out{};
   if (literal == "size"){
+    std::vector<WATExpr> out{};
     assert(children.size() == 1);
     std::vector<WATExpr> child_exprs = children[0].Emit(state);
     VarType child_type = children.at(0).ReturnType(state.table);
@@ -514,6 +514,23 @@ std::vector<WATExpr> ASTNode::EmitBuiltInFunctionCall(State & state) const {
       out.push_back(expr);
     }
     out.emplace_back("call", Variable("getStringLength"));
+    return out;
+  } else if (literal == "at") {
+    assert(children.size() == 2);
+    WATExpr out{"call", Variable("index_str")};
+
+    std::vector<WATExpr> child_exprs = children[0].Emit(state);
+    VarType child_type = children.at(0).ReturnType(state.table);
+
+    std::vector<WATExpr> index = children[1].Emit(state);
+    VarType index_type = children.at(1).ReturnType(state.table);
+
+    if (index_type != VarType::INT || child_type != VarType::STRING) {
+      ErrorNoLine("Invalid: Attempting index into a string incorrectly.");
+    }
+
+    out.Push(std::move(child_exprs));
+    out.Push(std::move(index));
     return out;
   } else {
     ErrorNoLine("Unknown built in function");
