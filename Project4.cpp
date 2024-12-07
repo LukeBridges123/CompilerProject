@@ -224,35 +224,40 @@ private:
       std::string operation = ConsumeToken().lexeme;
       ASTNode rhs = ParseTerm();
 
-      
-      if (isStringOrChar(std::move(*lhs)) && isStringOrChar(std::move(rhs))) {
+      VarType lhs_type = lhs->ReturnType(state.table); 
+      VarType rhs_type = rhs.ReturnType(state.table);
+      if ((lhs_type == VarType::CHAR || lhs_type == VarType::STRING) && 
+          (rhs_type == VarType::CHAR || rhs_type==VarType::STRING)) {
         Error(CurToken(), "Invalid action: Cannot perform multiplication, "
                           "division, or modulus on a char or a string with another char or string!");
-      } else if ((isStringOrChar(std::move(*lhs)) || isStringOrChar(std::move(rhs))) &&
-               operation != "*")
+      } else if ((lhs_type == VarType::CHAR || lhs_type == VarType::CHAR || rhs_type == VarType::STRING || 
+                  rhs_type==VarType::STRING) &&
+                  operation != "*")
       {
         Error(CurToken(), "Invalid action: Cannot perform "
                           "division, or modulus on a char or string type!");
-      } else if ((isStringOrChar(std::move(*lhs)) || isStringOrChar(std::move(rhs))) &&
-               (lhs->ReturnType(state.table) == VarType::DOUBLE || rhs.ReturnType(state.table) == VarType::DOUBLE)) {
+      } else if ((lhs_type == VarType::CHAR || lhs_type == VarType::CHAR || rhs_type == VarType::STRING || rhs_type==VarType::STRING) &&
+               (lhs_type == VarType::DOUBLE || rhs_type == VarType::DOUBLE)) {
         Error(CurToken(), "Invalid action: Cannot perform "
                           "operation on a char or string type with a double!");
       }
 
       if (operation == "%" &&
-          (lhs->ReturnType(state.table) == VarType::DOUBLE ||
-           rhs.ReturnType(state.table) == VarType::DOUBLE)) {
+          (lhs_type == VarType::DOUBLE ||
+           rhs_type == VarType::DOUBLE)) {
         Error(CurToken(),
               "Invalid action: Cannot perform modulus with a double type!");
       }
 
       lhs = std::make_unique<ASTNode>(ASTNode(ASTNode::OPERATION, operation,
                                               std::move(*lhs), std::move(rhs)));
+                                              
     }
     return ASTNode{std::move(*lhs)};
   }
 
   bool isStringOrChar(ASTNode node) {
+    //std::cout << "testing..." << std::endl;
     if (node.ReturnType(state.table) == VarType::CHAR || 
         node.ReturnType(state.table) == VarType::STRING) {
       return true;

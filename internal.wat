@@ -123,6 +123,42 @@
   (i32.store8)
 )
 
+(func $multply_char (param $char i32) (param $times i32) (result i32)
+  (local $res_val i32)   ;; Return value
+  (local $mem_ptr i32)
+
+  (local.get $times)
+  (call $_str_alloc)
+
+  (local.tee $mem_ptr)
+  (local.set $res_val)
+  (block $exit1 ;; Outer block
+    (loop $loop
+      (local.get $times)
+      (i32.eqz)        
+      (br_if $exit1)
+
+      (local.get $mem_ptr)
+      (local.get $char)
+      (i32.store8)
+
+      (local.get $mem_ptr)
+      (i32.const 1)
+      (i32.add)
+      (local.set $mem_ptr)
+
+      (local.get $times)
+      (i32.const 1)
+      (i32.sub)
+      (local.set $times)
+      
+      ;; Continue the loop
+      (br $loop)
+    )
+  )
+  (local.get $res_val)
+)
+
 (func $multply_str (param $str i32) (param $times i32) (result i32)
   (local $res_val i32)   ;; Return value
   (local $mem_ptr i32)

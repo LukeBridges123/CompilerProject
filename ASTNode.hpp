@@ -112,7 +112,7 @@ private:
   std::vector<WATExpr> EmitIdentifier(State &state) const;
   std::vector<WATExpr> EmitConditional(State &state) const;
   std::vector<WATExpr> EmitOperation(State &state) const;
-  std::vector<WATExpr> EmitMuilply(std::vector<WATExpr> content, std::vector<WATExpr> mul) const;
+  std::vector<WATExpr> EmitSpecialMult(std::vector<WATExpr> content, std::vector<WATExpr> mul, VarType type) const;
   std::vector<WATExpr> EmitWhile(State &state) const;
   std::vector<WATExpr> EmitFunction(State &state) const;
   std::vector<WATExpr> EmitContinue(State &state) const;
