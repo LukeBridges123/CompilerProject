@@ -43,8 +43,7 @@
       )
     )
     ;; Return the calculated length
-    local.get $length
-  )
+    (local.get $length))
 
 (func $copyStr (param $mem_ptr i32) (param $str i32) (result i32)
   (local $index i32) 
@@ -83,12 +82,9 @@
       (local.set $index)
 
       ;; Continue the loop
-      (br $loop)
-    )
-  )
+      (br $loop)))
   ;; Return the calculated length
-  local.get $mem_ptr
-)
+  (local.get $mem_ptr))
 
 (func $addTwo_str (param $str1 i32) (param $str2 i32) (result i32)
   (global.get $_free) ;; Save starting point to return
@@ -108,8 +104,7 @@
   (local.get $str2)
   (call $copyStr)
 
-  (drop)
-)
+  (drop))
 
 (func $charTo_str (param $char i32) (result i32)
   (global.get $_free) ;; Save starting point to return
@@ -118,10 +113,8 @@
   (call $_str_alloc)
 
   (local.get $char)
-  ;;(i32.load8_u) this shouldn't be here--we need to store in the newly allocated memory, not access what's there
 
-  (i32.store8)
-)
+  (i32.store8))
 
 (func $multply_char (param $char i32) (param $times i32) (result i32)
   (local $res_val i32)   ;; Return value
@@ -153,11 +146,9 @@
       (local.set $times)
       
       ;; Continue the loop
-      (br $loop)
-    )
-  )
-  (local.get $res_val)
-)
+      (br $loop)))
+
+  (local.get $res_val))
 
 (func $multply_str (param $str i32) (param $times i32) (result i32)
   (local $res_val i32)   ;; Return value
@@ -193,17 +184,28 @@
       (local.set $times)
       
       ;; Continue the loop
-      (br $loop)
-    )
-  )
+      (br $loop)))
 
-  (local.get $res_val)
-)
+  (local.get $res_val))
 
 (func $index_str (param $str i32) (param $index i32) (result i32)
   (local.get $str)
   (local.get $index)
   (i32.add)
 
-  (i32.load8_u)
-)
+  (i32.load8_u))
+
+(func $assign_index (param $str i32) (param $index i32) (param $char i32)
+  (i32.store8
+    (i32.add
+      (local.get $str)
+      (local.get $index))
+    (local.get $char)))
+
+(func $assign_index_chain (param $str i32) (param $index i32) (param $char i32) (result i32)
+  (call $assign_index
+    (local.get $str)
+    (local.get $index)
+    (local.get $char))
+
+  (local.get $char))

@@ -136,14 +136,18 @@ private:
     ASTNode lhs = ParseOr();
     if (CurToken().lexeme == "=") {
       // can only have variable names as the LHS of an assignment
-      if (lhs.type != ASTNode::IDENTIFIER) {
-        ErrorUnexpected(CurToken(), Lexer::ID_ID);
+      if (lhs.type != ASTNode::IDENTIFIER &&
+          lhs.type != ASTNode::STRING_INDEX) {
+        ErrorUnexpected(CurToken(), Lexer::ID_ID, Lexer::ID_BRACKET_OPEN);
       }
       ExpectToken(Lexer::ID_ASSIGN);
       ASTNode rhs = ParseAssign();
       VarType left_type = lhs.ReturnType(state.table);
       VarType right_type = rhs.ReturnType(state.table);
-      if (left_type < right_type) {
+      if (left_type == VarType::STRING && right_type != VarType::STRING &&
+          right_type != VarType::CHAR) {
+        Error(CurToken(), "Only string and char can be assigned to string");
+      } else if (left_type < right_type) {
         Error(CurToken(), "Tried to assign higher-precision value to "
                           "lower-precision variable");
       }

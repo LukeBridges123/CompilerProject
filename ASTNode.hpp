@@ -108,8 +108,7 @@ private:
   std::vector<WATExpr> Emit(State &state) const;
   std::vector<WATExpr> EmitLiteral(State &state) const;
   std::vector<WATExpr> EmitScope(State &state) const;
-  std::vector<WATExpr> EmitAssign(State &state) const;
-  std::vector<WATExpr> EmitChainAssign(State &state) const;
+  std::vector<WATExpr> EmitAssign(State &state, bool chain) const;
   std::vector<WATExpr> EmitIdentifier(State &state) const;
   std::vector<WATExpr> EmitConditional(State &state) const;
   std::vector<WATExpr> EmitOperation(State &state) const;

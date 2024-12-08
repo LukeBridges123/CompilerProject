@@ -116,7 +116,7 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
   case FUNCTION:
     return EmitFunction(state);
   case ASSIGN:
-    return EmitAssign(state);
+    return EmitAssign(state, false);
   case IDENTIFIER:
     return EmitIdentifier(state);
   case CONDITIONAL:
@@ -239,50 +239,50 @@ std::vector<WATExpr> ASTNode::EmitScope(State &state) const {
   return new_scope;
 }
 
-std::vector<WATExpr> ASTNode::EmitAssign(State &state) const {
+std::vector<WATExpr> ASTNode::EmitAssign(State &state, bool chain) const {
   assert(children.size() == 2);
-  assert(children[0].type == IDENTIFIER);
+  assert(children[0].type == IDENTIFIER || children[0].type == STRING_INDEX);
 
   // this should produce some code which, when run, leaves the
   // rvalue on the stack
   std::vector<WATExpr> rvalue;
 
   if (children.at(1).type == ASSIGN) {
-    rvalue = children.at(1).EmitChainAssign(state);
+    rvalue = children.at(1).EmitAssign(state, true);
   } else {
     rvalue = children.at(1).Emit(state);
   }
 
-  VarType left_type = children.at(0).ReturnType(state.table);
-  VarType right_type = children.at(1).ReturnType(state.table);
-  if (left_type == VarType::DOUBLE && right_type == VarType::INT) {
-    rvalue.emplace_back("f64.convert_i32_s");
+  if (children.at(0).type == IDENTIFIER) {
+    VarType left_type = children.at(0).ReturnType(state.table);
+    VarType right_type = children.at(1).ReturnType(state.table);
+    if (left_type == VarType::DOUBLE && right_type == VarType::INT) {
+      rvalue.emplace_back("f64.convert_i32_s");
+    }
+    std::string op = chain ? "local.tee" : "local.set";
+    return WATExpr{op, Variable("var", children[0].var_id), std::move(rvalue)};
+  } else if (children.at(0).type == STRING_INDEX) {
+    // this should be caught at parse-time
+    assert(children.at(1).ReturnType(state.table) == VarType::CHAR);
+    assert(children.at(0).children.size() == 2);
+
+    ASTNode const &str_index = children.at(0);
+
+    VarType child_type = str_index.children.at(0).ReturnType(state.table);
+    VarType index_type = str_index.children.at(1).ReturnType(state.table);
+
+    if (index_type != VarType::INT || child_type != VarType::STRING) {
+      ErrorNoLine("Invalid: Attempting index into a string incorrectly.");
+    }
+
+    std::string op = chain ? "assign_index_chain" : "assign_index";
+    return WATExpr("call")
+        .Push(Variable(op))
+        .Push(str_index.children.at(0).Emit(state))
+        .Push(str_index.children.at(1).Emit(state))
+        .Push(std::move(rvalue));
   }
-  return WATExpr{"local.set", Variable("var", children[0].var_id),
-                 std::move(rvalue)};
-}
-
-std::vector<WATExpr> ASTNode::EmitChainAssign(State &state) const {
-  assert(children.size() == 2);
-  assert(children[0].type == IDENTIFIER);
-
-  // this should produce some code which, when run, leaves the
-  // rvalue on the stack
-  std::vector<WATExpr> rvalue;
-
-  if (children.at(1).type == ASSIGN) {
-    rvalue = children.at(1).EmitChainAssign(state);
-  } else {
-    rvalue = children.at(1).Emit(state);
-  }
-
-  VarType left_type = children.at(0).ReturnType(state.table);
-  VarType right_type = children.at(1).ReturnType(state.table);
-  if (left_type == VarType::DOUBLE && right_type == VarType::INT) {
-    rvalue.emplace_back("f64.convert_i32_s");
-  }
-  return WATExpr{"local.tee", Variable("var", children[0].var_id),
-                 std::move(rvalue)};
+  assert(false);
 }
 
 std::vector<WATExpr>
