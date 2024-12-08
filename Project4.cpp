@@ -329,12 +329,15 @@ private:
 
     std::string name = ConsumeToken().lexeme;
 
-    if (IfToken(Lexer::ID_OPEN_PARENTHESIS)) { // treat as a function call
+    if (IfToken(Lexer::ID_OPEN_PARENTHESIS)) {
       if (name == "size") {
         ASTNode out{ASTNode::BUILT_IN_FUNCTION_CALL, name};
         ASTNode arg = ParseExpr();
         out.AddChild(std::move(arg));
-        assert(arg.ReturnType(state.table) == VarType::STRING);
+        if (arg.ReturnType(state.table) != VarType::STRING) {
+          ErrorNoLine(
+              "Invalid: Attempting to use size() on a non-string type.");
+        }
         ExpectToken(Lexer::ID_CLOSE_PARENTHESIS);
         return out;
       }
@@ -374,13 +377,14 @@ private:
     if (CurToken() == Lexer::ID_TYPE_CAST) {
       return CheckTypeCast(std::move(node));
     } else if (CurToken() == Lexer::ID_BRACKET_OPEN) {
+      ASTNode out{ASTNode::STRING_INDEX};
       ExpectToken(Lexer::ID_BRACKET_OPEN);
       ASTNode subexpression = ParseExpr();
       ExpectToken(Lexer::ID_BRACKET_CLOSE);
-      return ASTNode{ASTNode::BUILT_IN_FUNCTION_CALL, "at", std::move(node),
-                     std::move(subexpression)};
+      out.AddChild(std::move(node));
+      out.AddChild(std::move(subexpression));
+      return out;
     }
-
     return node;
   }
 
