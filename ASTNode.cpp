@@ -78,6 +78,14 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
     return VarType::NONE;
   case FUNCTION_CALL:
     return table.functions.at(var_id).rettype;
+  case BUILT_IN_FUNCTION_CALL: {
+    if (literal == "size") {
+      return VarType::INT;
+    } else if (literal == "at") {
+      return VarType::CHAR;
+    }
+    assert(false);
+  }
   default:
     assert(false);
     return VarType::UNKNOWN;
