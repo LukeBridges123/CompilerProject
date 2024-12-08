@@ -24,10 +24,6 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
         literal == "%") {
       return VarType::INT;
     }
-    // sqrt always returns a double; easiest to have / do the same thing?
-    if (literal == "sqrt") {
-      return VarType::DOUBLE;
-    }
     if (literal == "-" && children.size() == 1) {
       return children.at(0).ReturnType(table);
     }
@@ -83,6 +79,8 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
       return VarType::INT;
     } else if (literal == "at") {
       return VarType::CHAR;
+    } else if (literal == "sqrt") {
+      return VarType::DOUBLE;
     }
     assert(false);
   }
@@ -325,13 +323,6 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     return WATExpr{left_type.WATOperation("mul"),
                    WATExpr{left_type.WATOperation("const"), "-1"},
                    std::move(left)};
-  } else if (literal == "sqrt") {
-    WATExpr sqrt{"f64.sqrt", std::move(left)};
-    if (left_type == VarType::INT) {
-      sqrt.Child("f64.convert_i32_s");
-    }
-
-    return sqrt;
   }
 
   // remaining operations are binary operations
@@ -535,18 +526,22 @@ std::vector<WATExpr> ASTNode::EmitFunctionCall(State &state) const {
 
 std::vector<WATExpr> ASTNode::EmitBuiltInFunctionCall(State &state) const {
   if (literal == "size") {
-    std::vector<WATExpr> out{};
     assert(children.size() == 1);
-    std::vector<WATExpr> child_exprs = children[0].Emit(state);
     VarType child_type = children.at(0).ReturnType(state.table);
     if (child_type != VarType::STRING) {
-      ErrorNoLine("Invalid: Attempting to us size() on a non-string type.");
+      ErrorNoLine("Invalid: Attempting to use size() on a non-string type.");
     }
-    for (auto expr : child_exprs) {
-      out.push_back(expr);
+    return WATExpr("call", Variable("getStringLength"))
+        .Push(children[0].Emit(state));
+  } else if (literal == "sqrt") {
+    assert(children.size() == 1);
+    std::vector<WATExpr> left = children.at(0).Emit(state);
+    VarType left_type = children.at(0).ReturnType(state.table);
+    WATExpr sqrt{"f64.sqrt", std::move(left)};
+    if (left_type == VarType::INT) {
+      sqrt.Child("f64.convert_i32_s");
     }
-    out.emplace_back("call", Variable("getStringLength"));
-    return out;
+    return sqrt;
   } else if (literal == "at") {
     assert(children.size() == 2);
     WATExpr out{"call", Variable("index_str")};

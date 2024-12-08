@@ -289,8 +289,7 @@ private:
   }
 
   ASTNode ParseSqrt() {
-    auto inside = ParseExpr();
-    return ASTNode(ASTNode::OPERATION, "sqrt", std::move(inside));
+    return ASTNode(ASTNode::BUILT_IN_FUNCTION_CALL, "sqrt", ParseExpr());
   }
 
   ASTNode CheckTypeCast(ASTNode node) {
