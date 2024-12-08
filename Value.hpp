@@ -2,9 +2,9 @@
 #include "Type.hpp"
 
 #include <stdexcept>
+#include <string>
 #include <type_traits>
 #include <variant>
-#include <string>
 
 using ValueType = std::variant<int, double, char, size_t>;
 
@@ -49,14 +49,15 @@ public:
     assigned = true;
   }
 
-
   std::string toString() const {
-        return std::visit([](const auto& arg) -> std::string {
-            if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, char>) {
-              return std::string(1, arg); // Convert char to a string
-            } else {
-              return std::to_string(arg); // Use std::to_string for numbers
-            }
-        }, value);
-    }
+    return std::visit(
+        [](const auto &arg) -> std::string {
+          if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, char>) {
+            return std::string(1, arg); // Convert char to a string
+          } else {
+            return std::to_string(arg); // Use std::to_string for numbers
+          }
+        },
+        value);
+  }
 };

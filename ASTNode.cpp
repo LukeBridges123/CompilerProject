@@ -36,13 +36,15 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
       assert(children.size() == 2);
       VarType left_type = children.at(0).ReturnType(table);
       VarType right_type = children.at(1).ReturnType(table);
-      if (literal == "*" && (left_type == VarType::CHAR || right_type == VarType::CHAR || 
-                             left_type == VarType::STRING || right_type == VarType::STRING)){
+      if (literal == "*" &&
+          (left_type == VarType::CHAR || right_type == VarType::CHAR ||
+           left_type == VarType::STRING || right_type == VarType::STRING)) {
         return VarType::STRING;
       }
       return std::max(left_type, right_type);
     }
-    ErrorNoLine(std::format("Invalid operation \"{}\" during type checking", literal));
+    ErrorNoLine(
+        std::format("Invalid operation \"{}\" during type checking", literal));
   case IDENTIFIER:
     return table.variables.at(var_id).type_var;
   case CONDITIONAL: {
@@ -184,7 +186,7 @@ WATExpr ASTNode::EmitModule(State &state) const {
         .Push(Quote(literal + "\\00"));
     current_free += literal.size() + 1;
   }
-  
+
   // write free memory position variable
   WATExpr &global = out.Child("global", Variable("_free")).Newline();
   global.Child("mut", "i32").Inline();
@@ -211,14 +213,14 @@ WATExpr ASTNode::EmitModule(State &state) const {
   return out;
 }
 
-std::vector<WATExpr> ASTNode::EmitLiteral([[maybe_unused]] State &symbols) const {
+std::vector<WATExpr>
+ASTNode::EmitLiteral([[maybe_unused]] State &symbols) const {
   std::string value_str = std::visit(
       [](auto &&value) { return std::format("{}", value); }, value->getValue());
   return WATExpr(value->getType().WATOperation("const"), value_str)
       .Comment("Literal value")
       .Inline();
 }
-
 
 std::vector<WATExpr> ASTNode::EmitScope(State &state) const {
   std::vector<WATExpr> new_scope{};
@@ -350,17 +352,20 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     return {test_first, cond};
   }
 
-  if (left_type == VarType::STRING && right_type == VarType::STRING && literal == "+") {
+  if (left_type == VarType::STRING && right_type == VarType::STRING &&
+      literal == "+") {
     WATExpr out{"call", Variable("addTwo_str")};
     out.Push(std::move(left));
     out.Push(std::move(right));
 
     return out;
-  } else if (left_type == VarType::STRING || right_type == VarType::STRING){
-    if (left_type == VarType::INT && literal == "*"){
-      return EmitSpecialMult(std::move(right), std::move(left), VarType::STRING);
+  } else if (left_type == VarType::STRING || right_type == VarType::STRING) {
+    if (left_type == VarType::INT && literal == "*") {
+      return EmitSpecialMult(std::move(right), std::move(left),
+                             VarType::STRING);
     } else if (right_type == VarType::INT && literal == "*") {
-      return EmitSpecialMult(std::move(left), std::move(right), VarType::STRING);
+      return EmitSpecialMult(std::move(left), std::move(right),
+                             VarType::STRING);
     }
 
     WATExpr chr{"call", Variable("charTo_str")};
@@ -373,28 +378,31 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     } else if (right_type == VarType::CHAR) {
       // chr.Push(std::move(right));
       out.Push(std::move(left));
-      chr.Push(std::move(right)); // reordered -- it matters which argument to addTwo_str goes first, 
-                                  // and presumably the left arg always goes before the right
+      chr.Push(std::move(right)); // reordered -- it matters which argument to
+                                  // addTwo_str goes first, and presumably the
+                                  // left arg always goes before the right
       out.Push(chr);
     } else {
-      ErrorNoLine("Invalid action: Cannot perfom addition with a string and a non-string!");
+      ErrorNoLine("Invalid action: Cannot perfom addition with a string and a "
+                  "non-string!");
     }
     return out;
-  } else if (left_type == VarType::CHAR && right_type == VarType::INT && literal == "*"){
-     return EmitSpecialMult(std::move(left), std::move(right), VarType::CHAR);
-   } else if (left_type == VarType::INT && right_type == VarType::CHAR && literal == "*"){
-     return EmitSpecialMult(std::move(right), std::move(left), VarType::CHAR);
-   }
+  } else if (left_type == VarType::CHAR && right_type == VarType::INT &&
+             literal == "*") {
+    return EmitSpecialMult(std::move(left), std::move(right), VarType::CHAR);
+  } else if (left_type == VarType::INT && right_type == VarType::CHAR &&
+             literal == "*") {
+    return EmitSpecialMult(std::move(right), std::move(left), VarType::CHAR);
+  }
 
-   std::string op_name = LITERAL_TO_WAT.at(literal);
-   bool use_signed = (literal == "<" || literal == ">" || literal == "<=" ||
-                      literal == ">=" || literal == "/");
-   WATExpr expr{op_type.WATOperation(op_name, use_signed)};
+  std::string op_name = LITERAL_TO_WAT.at(literal);
+  bool use_signed = (literal == "<" || literal == ">" || literal == "<=" ||
+                     literal == ">=" || literal == "/");
+  WATExpr expr{op_type.WATOperation(op_name, use_signed)};
 
-   expr.Push(std::move(left));
-   if (left_type == VarType::INT && right_type == VarType::DOUBLE)
-   {
-     expr.Child(right_type.WATOperation("convert_i32_s"));
+  expr.Push(std::move(left));
+  if (left_type == VarType::INT && right_type == VarType::DOUBLE) {
+    expr.Child(right_type.WATOperation("convert_i32_s"));
   }
   expr.Push(std::move(right));
   if (right_type == VarType::INT && left_type == VarType::DOUBLE) {
@@ -404,16 +412,20 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
   return expr;
 }
 
-std::vector<WATExpr> ASTNode::EmitSpecialMult(std::vector<WATExpr> content, std::vector<WATExpr> mul, VarType type) const {
-   std::vector<WATExpr> out{};
-   for (auto expr : content){
+std::vector<WATExpr> ASTNode::EmitSpecialMult(std::vector<WATExpr> content,
+                                              std::vector<WATExpr> mul,
+                                              VarType type) const {
+  std::vector<WATExpr> out{};
+  for (auto expr : content) {
     out.push_back(expr);
-   }
-   for (auto expr : mul){
+  }
+  for (auto expr : mul) {
     out.push_back(expr);
-   }
-   out.push_back(WATExpr("call", (type == VarType::STRING) ? Variable("multply_str") : Variable("multply_char")));
-   return out;
+  }
+  out.push_back(WATExpr("call", (type == VarType::STRING)
+                                    ? Variable("multply_str")
+                                    : Variable("multply_char")));
+  return out;
 }
 
 std::vector<WATExpr> ASTNode::EmitWhile(State &state) const {
@@ -488,11 +500,11 @@ std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {
   for (ASTNode const &child : children) {
     if (returnCount > 0) {
       ErrorNoLine("Function ", info.name,
-                " shouldn't do anything after a return statement.");
+                  " shouldn't do anything after a return statement.");
     }
 
     function.Push(child.Emit(state));
-    
+
     if (child.type == ASTNode::RETURN) {
       returnCount += 1;
     }
@@ -513,8 +525,8 @@ std::vector<WATExpr> ASTNode::EmitFunctionCall(State &state) const {
   return out;
 }
 
-std::vector<WATExpr> ASTNode::EmitBuiltInFunctionCall(State & state) const {
-  if (literal == "size"){
+std::vector<WATExpr> ASTNode::EmitBuiltInFunctionCall(State &state) const {
+  if (literal == "size") {
     std::vector<WATExpr> out{};
     assert(children.size() == 1);
     std::vector<WATExpr> child_exprs = children[0].Emit(state);

@@ -224,41 +224,40 @@ private:
       std::string operation = ConsumeToken().lexeme;
       ASTNode rhs = ParseTerm();
 
-      VarType lhs_type = lhs->ReturnType(state.table); 
+      VarType lhs_type = lhs->ReturnType(state.table);
       VarType rhs_type = rhs.ReturnType(state.table);
-      if ((lhs_type == VarType::CHAR || lhs_type == VarType::STRING) && 
-          (rhs_type == VarType::CHAR || rhs_type==VarType::STRING)) {
+      if ((lhs_type == VarType::CHAR || lhs_type == VarType::STRING) &&
+          (rhs_type == VarType::CHAR || rhs_type == VarType::STRING)) {
         Error(CurToken(), "Invalid action: Cannot perform multiplication, "
-                          "division, or modulus on a char or a string with another char or string!");
-      } else if ((lhs_type == VarType::CHAR || lhs_type == VarType::CHAR || rhs_type == VarType::STRING || 
-                  rhs_type==VarType::STRING) &&
-                  operation != "*")
-      {
+                          "division, or modulus on a char or a string with "
+                          "another char or string!");
+      } else if ((lhs_type == VarType::CHAR || lhs_type == VarType::CHAR ||
+                  rhs_type == VarType::STRING || rhs_type == VarType::STRING) &&
+                 operation != "*") {
         Error(CurToken(), "Invalid action: Cannot perform "
                           "division, or modulus on a char or string type!");
-      } else if ((lhs_type == VarType::CHAR || lhs_type == VarType::CHAR || rhs_type == VarType::STRING || rhs_type==VarType::STRING) &&
-               (lhs_type == VarType::DOUBLE || rhs_type == VarType::DOUBLE)) {
+      } else if ((lhs_type == VarType::CHAR || lhs_type == VarType::CHAR ||
+                  rhs_type == VarType::STRING || rhs_type == VarType::STRING) &&
+                 (lhs_type == VarType::DOUBLE || rhs_type == VarType::DOUBLE)) {
         Error(CurToken(), "Invalid action: Cannot perform "
                           "operation on a char or string type with a double!");
       }
 
       if (operation == "%" &&
-          (lhs_type == VarType::DOUBLE ||
-           rhs_type == VarType::DOUBLE)) {
+          (lhs_type == VarType::DOUBLE || rhs_type == VarType::DOUBLE)) {
         Error(CurToken(),
               "Invalid action: Cannot perform modulus with a double type!");
       }
 
       lhs = std::make_unique<ASTNode>(ASTNode(ASTNode::OPERATION, operation,
                                               std::move(*lhs), std::move(rhs)));
-                                              
     }
     return ASTNode{std::move(*lhs)};
   }
 
   bool isStringOrChar(ASTNode node) {
-    //std::cout << "testing..." << std::endl;
-    if (node.ReturnType(state.table) == VarType::CHAR || 
+    // std::cout << "testing..." << std::endl;
+    if (node.ReturnType(state.table) == VarType::CHAR ||
         node.ReturnType(state.table) == VarType::STRING) {
       return true;
     }
@@ -332,7 +331,7 @@ private:
     std::string name = ConsumeToken().lexeme;
 
     if (IfToken(Lexer::ID_OPEN_PARENTHESIS)) { // treat as a function call
-      if (name == "size"){
+      if (name == "size") {
         ASTNode out{ASTNode::BUILT_IN_FUNCTION_CALL, name};
         ASTNode arg = ParseExpr();
         out.AddChild(std::move(arg));
@@ -379,7 +378,8 @@ private:
       ExpectToken(Lexer::ID_BRACKET_OPEN);
       ASTNode subexpression = ParseExpr();
       ExpectToken(Lexer::ID_BRACKET_CLOSE);
-      return ASTNode{ASTNode::BUILT_IN_FUNCTION_CALL, "at", std::move(node),std::move(subexpression)};
+      return ASTNode{ASTNode::BUILT_IN_FUNCTION_CALL, "at", std::move(node),
+                     std::move(subexpression)};
     }
 
     return node;
