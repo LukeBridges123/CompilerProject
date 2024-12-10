@@ -92,7 +92,7 @@ void WATWriter::Write(WATExpr const &expr) {
 }
 
 WATParser::WATParser(unsigned char *array, size_t length) {
-  std::string wat; 
+  std::string wat;
   std::copy(array, array + length, std::back_inserter(wat));
   in = std::istringstream{wat};
 }

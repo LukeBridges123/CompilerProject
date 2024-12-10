@@ -136,14 +136,18 @@ private:
     ASTNode lhs = ParseOr();
     if (CurToken().lexeme == "=") {
       // can only have variable names as the LHS of an assignment
-      if (lhs.type != ASTNode::IDENTIFIER) {
-        ErrorUnexpected(CurToken(), Lexer::ID_ID);
+      if (lhs.type != ASTNode::IDENTIFIER &&
+          lhs.type != ASTNode::STRING_INDEX) {
+        ErrorUnexpected(CurToken(), Lexer::ID_ID, Lexer::ID_BRACKET_OPEN);
       }
       ExpectToken(Lexer::ID_ASSIGN);
       ASTNode rhs = ParseAssign();
       VarType left_type = lhs.ReturnType(state.table);
       VarType right_type = rhs.ReturnType(state.table);
-      if (left_type < right_type) {
+      if (left_type == VarType::STRING && right_type != VarType::STRING &&
+          right_type != VarType::CHAR) {
+        Error(CurToken(), "Only string and char can be assigned to string");
+      } else if (left_type < right_type) {
         Error(CurToken(), "Tried to assign higher-precision value to "
                           "lower-precision variable");
       }
@@ -224,15 +228,27 @@ private:
       std::string operation = ConsumeToken().lexeme;
       ASTNode rhs = ParseTerm();
 
-      if (lhs->ReturnType(state.table) == VarType::CHAR ||
-          rhs.ReturnType(state.table) == VarType::CHAR) {
+      VarType lhs_type = lhs->ReturnType(state.table);
+      VarType rhs_type = rhs.ReturnType(state.table);
+      if ((lhs_type == VarType::CHAR || lhs_type == VarType::STRING) &&
+          (rhs_type == VarType::CHAR || rhs_type == VarType::STRING)) {
         Error(CurToken(), "Invalid action: Cannot perform multiplication, "
-                          "division, or modulus with a char type!");
+                          "division, or modulus on a char or a string with "
+                          "another char or string!");
+      } else if ((lhs_type == VarType::CHAR || rhs_type == VarType::CHAR ||
+                  lhs_type == VarType::STRING || rhs_type == VarType::STRING) &&
+                 operation != "*") {
+        Error(CurToken(), "Invalid action: Cannot perform "
+                          "division, or modulus on a char or string type!");
+      } else if ((lhs_type == VarType::CHAR || rhs_type == VarType::CHAR ||
+                  lhs_type == VarType::STRING || rhs_type == VarType::STRING) &&
+                 (lhs_type == VarType::DOUBLE || rhs_type == VarType::DOUBLE)) {
+        Error(CurToken(), "Invalid action: Cannot perform "
+                          "operation on a char or string type with a double!");
       }
 
       if (operation == "%" &&
-          (lhs->ReturnType(state.table) == VarType::DOUBLE ||
-           rhs.ReturnType(state.table) == VarType::DOUBLE)) {
+          (lhs_type == VarType::DOUBLE || rhs_type == VarType::DOUBLE)) {
         Error(CurToken(),
               "Invalid action: Cannot perform modulus with a double type!");
       }
@@ -241,6 +257,15 @@ private:
                                               std::move(*lhs), std::move(rhs)));
     }
     return ASTNode{std::move(*lhs)};
+  }
+
+  bool isStringOrChar(ASTNode node) {
+    // std::cout << "testing..." << std::endl;
+    if (node.ReturnType(state.table) == VarType::CHAR ||
+        node.ReturnType(state.table) == VarType::STRING) {
+      return true;
+    }
+    return false;
   }
 
   ASTNode ParseNegate() {
@@ -268,8 +293,7 @@ private:
   }
 
   ASTNode ParseSqrt() {
-    auto inside = ParseExpr();
-    return ASTNode(ASTNode::OPERATION, "sqrt", std::move(inside));
+    return ASTNode(ASTNode::BUILT_IN_FUNCTION_CALL, "sqrt", ParseExpr());
   }
 
   ASTNode CheckTypeCast(ASTNode node) {
@@ -309,12 +333,15 @@ private:
 
     std::string name = ConsumeToken().lexeme;
 
-    if (IfToken(Lexer::ID_OPEN_PARENTHESIS)) { // treat as a function call
-      if (name == "size"){
+    if (IfToken(Lexer::ID_OPEN_PARENTHESIS)) {
+      if (name == "size") {
         ASTNode out{ASTNode::BUILT_IN_FUNCTION_CALL, name};
         ASTNode arg = ParseExpr();
         out.AddChild(std::move(arg));
-        assert(arg.ReturnType(state.table) == VarType::STRING);
+        if (arg.ReturnType(state.table) != VarType::STRING) {
+          ErrorNoLine(
+              "Invalid: Attempting to use size() on a non-string type.");
+        }
         ExpectToken(Lexer::ID_CLOSE_PARENTHESIS);
         return out;
       }
@@ -350,6 +377,21 @@ private:
     return CheckTypeCast(ASTNode(ASTNode::LITERAL, Value{value}));
   }
 
+  ASTNode String_ops(ASTNode node) {
+    if (CurToken() == Lexer::ID_TYPE_CAST) {
+      return CheckTypeCast(std::move(node));
+    } else if (CurToken() == Lexer::ID_BRACKET_OPEN) {
+      ASTNode out{ASTNode::STRING_INDEX};
+      ExpectToken(Lexer::ID_BRACKET_OPEN);
+      ASTNode subexpression = ParseExpr();
+      ExpectToken(Lexer::ID_BRACKET_CLOSE);
+      out.AddChild(std::move(node));
+      out.AddChild(std::move(subexpression));
+      return out;
+    }
+    return node;
+  }
+
   ASTNode ParseTerm() {
     Token const &current = CurToken();
     switch (current) {
@@ -360,14 +402,14 @@ private:
     case Lexer::ID_CHAR:
       return ConstructLiteral(ConsumeToken().lexeme[1]);
     case Lexer::ID_ID:
-      return CheckTypeCast(ParseIdentifier());
+      return String_ops(ParseIdentifier());
     case Lexer::ID_STRING:
       return CheckTypeCast(ParseString());
     case Lexer::ID_OPEN_PARENTHESIS: {
       ExpectToken(Lexer::ID_OPEN_PARENTHESIS);
       ASTNode subexpression = ParseExpr();
       ExpectToken(Lexer::ID_CLOSE_PARENTHESIS);
-      return CheckTypeCast(std::move(subexpression));
+      return String_ops(std::move(subexpression));
     }
     case Lexer::ID_MATH:
       if (current.lexeme == "-") {

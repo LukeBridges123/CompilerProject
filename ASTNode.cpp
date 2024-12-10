@@ -24,10 +24,6 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
         literal == "%") {
       return VarType::INT;
     }
-    // sqrt always returns a double; easiest to have / do the same thing?
-    if (literal == "sqrt") {
-      return VarType::DOUBLE;
-    }
     if (literal == "-" && children.size() == 1) {
       return children.at(0).ReturnType(table);
     }
@@ -36,9 +32,15 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
       assert(children.size() == 2);
       VarType left_type = children.at(0).ReturnType(table);
       VarType right_type = children.at(1).ReturnType(table);
+      if (literal == "*" &&
+          (left_type == VarType::CHAR || right_type == VarType::CHAR ||
+           left_type == VarType::STRING || right_type == VarType::STRING)) {
+        return VarType::STRING;
+      }
       return std::max(left_type, right_type);
     }
-    ErrorNoLine("Invalid operation during type checking");
+    ErrorNoLine(
+        std::format("Invalid operation \"{}\" during type checking", literal));
   case IDENTIFIER:
     return table.variables.at(var_id).type_var;
   case CONDITIONAL: {
@@ -72,6 +74,16 @@ VarType ASTNode::ReturnType(SymbolTable const &table) const {
     return VarType::NONE;
   case FUNCTION_CALL:
     return table.functions.at(var_id).rettype;
+  case BUILT_IN_FUNCTION_CALL: {
+    if (literal == "size") {
+      return VarType::INT;
+    } else if (literal == "sqrt") {
+      return VarType::DOUBLE;
+    }
+    assert(false);
+  }
+  case STRING_INDEX:
+    return VarType::CHAR;
   default:
     assert(false);
     return VarType::UNKNOWN;
@@ -104,7 +116,7 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
   case FUNCTION:
     return EmitFunction(state);
   case ASSIGN:
-    return EmitAssign(state);
+    return EmitAssign(state, false);
   case IDENTIFIER:
     return EmitIdentifier(state);
   case CONDITIONAL:
@@ -123,6 +135,8 @@ std::vector<WATExpr> ASTNode::Emit(State &state) const {
     return EmitFunctionCall(state);
   case BUILT_IN_FUNCTION_CALL:
     return EmitBuiltInFunctionCall(state);
+  case STRING_INDEX:
+    return EmitStringIndex(state);
   case RETURN:
     assert(children.size() == 1);
     return WATExpr{"return", children.at(0).Emit(state)};
@@ -180,7 +194,7 @@ WATExpr ASTNode::EmitModule(State &state) const {
         .Push(Quote(literal + "\\00"));
     current_free += literal.size() + 1;
   }
-  
+
   // write free memory position variable
   WATExpr &global = out.Child("global", Variable("_free")).Newline();
   global.Child("mut", "i32").Inline();
@@ -207,14 +221,14 @@ WATExpr ASTNode::EmitModule(State &state) const {
   return out;
 }
 
-std::vector<WATExpr> ASTNode::EmitLiteral([[maybe_unused]] State &symbols) const {
+std::vector<WATExpr>
+ASTNode::EmitLiteral([[maybe_unused]] State &symbols) const {
   std::string value_str = std::visit(
       [](auto &&value) { return std::format("{}", value); }, value->getValue());
   return WATExpr(value->getType().WATOperation("const"), value_str)
       .Comment("Literal value")
       .Inline();
 }
-
 
 std::vector<WATExpr> ASTNode::EmitScope(State &state) const {
   std::vector<WATExpr> new_scope{};
@@ -227,7 +241,7 @@ std::vector<WATExpr> ASTNode::EmitScope(State &state) const {
 
 std::vector<WATExpr> ASTNode::EmitAssign(State &state, bool chain) const {
   assert(children.size() == 2);
-  assert(children[0].type == IDENTIFIER);
+  assert(children[0].type == IDENTIFIER || children[0].type == STRING_INDEX);
 
   // this should produce some code which, when run, leaves the
   // rvalue on the stack
@@ -239,13 +253,38 @@ std::vector<WATExpr> ASTNode::EmitAssign(State &state, bool chain) const {
     rvalue = children.at(1).Emit(state);
   }
 
-  VarType left_type = children.at(0).ReturnType(state.table);
-  VarType right_type = children.at(1).ReturnType(state.table);
-  if (left_type == VarType::DOUBLE && right_type == VarType::INT) {
-    rvalue.emplace_back("f64.convert_i32_s");
+
+  if (children.at(0).type == IDENTIFIER) {
+    VarType left_type = children.at(0).ReturnType(state.table);
+    VarType right_type = children.at(1).ReturnType(state.table);
+    if (left_type == VarType::DOUBLE && right_type == VarType::INT) {
+      rvalue.emplace_back("f64.convert_i32_s");
+    }
+    std::string op = chain ? "local.tee" : "local.set";
+    return WATExpr{op, Variable("var", children[0].var_id), std::move(rvalue)};
+  } else if (children.at(0).type == STRING_INDEX) {
+    // this should be caught at parse-time
+    assert(children.at(1).ReturnType(state.table) == VarType::CHAR);
+    assert(children.at(0).children.size() == 2);
+
+    ASTNode const &str_index = children.at(0);
+
+    VarType child_type = str_index.children.at(0).ReturnType(state.table);
+    VarType index_type = str_index.children.at(1).ReturnType(state.table);
+
+    if (index_type != VarType::INT || child_type != VarType::STRING) {
+      ErrorNoLine("Invalid: Attempting index into a string incorrectly.");
+    }
+
+    std::string op = chain ? "assign_index_chain" : "assign_index";
+    return WATExpr("call")
+        .Push(Variable(op))
+        .Push(str_index.children.at(0).Emit(state))
+        .Push(str_index.children.at(1).Emit(state))
+        .Push(std::move(rvalue));
   }
-  return WATExpr{(chain ? "local.tee" : "local.set"), Variable("var", children[0].var_id),
-                 std::move(rvalue)};
+  assert(false);
+
 }
 
 std::vector<WATExpr>
@@ -288,13 +327,6 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     return WATExpr{left_type.WATOperation("mul"),
                    WATExpr{left_type.WATOperation("const"), "-1"},
                    std::move(left)};
-  } else if (literal == "sqrt") {
-    WATExpr sqrt{"f64.sqrt", std::move(left)};
-    if (left_type == VarType::INT) {
-      sqrt.Child("f64.convert_i32_s");
-    }
-
-    return sqrt;
   }
 
   // remaining operations are binary operations
@@ -346,26 +378,41 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     } else {
       ErrorNoLine("Unknown operation on two strings");
     }
-  }
-  else if (left_type == VarType::STRING || right_type == VarType::STRING){
-    WATExpr chr{"call", Variable("charTo_str")};
-    WATExpr out{"call", Variable("addTwo_str")};
-    if (left_type == VarType::CHAR) {
-      chr.Push(std::move(left));
-      out.Push(chr);
-      // chr.Push(std::move(left));
-      out.Push(std::move(right));
-    } else if (right_type == VarType::CHAR) {
-      // chr.Push(std::move(right));
-      out.Push(std::move(left));
-      chr.Push(std::move(right)); // reordered -- it matters which argument to addTwo_str goes first, 
-                                  // and presumably the left arg always goes before the right
-      out.Push(chr);
-    } else {
-      ErrorNoLine("Invalid action: Cannot perfom addition with a string and a non-string!");
-    }
+  } else if (left_type == VarType::STRING || right_type == VarType::STRING) {
+    if (left_type == VarType::INT && literal == "*") {
+      return EmitSpecialMult(std::move(right), std::move(left),
+                             VarType::STRING);
+    } else if (right_type == VarType::INT && literal == "*") {
+      return EmitSpecialMult(std::move(left), std::move(right),
+                             VarType::STRING);
+    } else if (literal == "+") {
 
+      WATExpr chr{"call", Variable("charTo_str")};
+      WATExpr out{"call", Variable("addTwo_str")};
+      if (left_type == VarType::CHAR) {
+        chr.Push(std::move(left));
+        out.Push(chr);
+        // chr.Push(std::move(left));
+        out.Push(std::move(right));
+      } else if (right_type == VarType::CHAR) {
+        // chr.Push(std::move(right));
+        out.Push(std::move(left));
+        chr.Push(std::move(right)); // reordered -- it matters which argument to
+                                  // addTwo_str goes first, and presumably the
+                                  // left arg always goes before the right
+        out.Push(chr);
+      } else {
+        ErrorNoLine("Invalid action: Cannot perfom addition with a string and a "
+                    "non-string!");
+      }
+    }
     return out;
+  } else if (left_type == VarType::CHAR && right_type == VarType::INT &&
+             literal == "*") {
+    return EmitSpecialMult(std::move(left), std::move(right), VarType::CHAR);
+  } else if (left_type == VarType::INT && right_type == VarType::CHAR &&
+             literal == "*") {
+    return EmitSpecialMult(std::move(right), std::move(left), VarType::CHAR);
   }
 
   std::string op_name = LITERAL_TO_WAT.at(literal);
@@ -383,6 +430,22 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
   }
 
   return expr;
+}
+
+std::vector<WATExpr> ASTNode::EmitSpecialMult(std::vector<WATExpr> content,
+                                              std::vector<WATExpr> mul,
+                                              VarType type) const {
+  std::vector<WATExpr> out{};
+  for (auto expr : content) {
+    out.push_back(expr);
+  }
+  for (auto expr : mul) {
+    out.push_back(expr);
+  }
+  out.push_back(WATExpr("call", (type == VarType::STRING)
+                                    ? Variable("multply_str")
+                                    : Variable("multply_char")));
+  return out;
 }
 
 std::vector<WATExpr> ASTNode::EmitWhile(State &state) const {
@@ -453,8 +516,18 @@ std::vector<WATExpr> ASTNode::EmitFunction(State &state) const {
         .Comment("Declare " + var.type_var.TypeName() + " " + var.name);
   }
 
+  int returnCount = 0;
   for (ASTNode const &child : children) {
+    if (returnCount > 0) {
+      ErrorNoLine("Function ", info.name,
+                  " shouldn't do anything after a return statement.");
+    }
+
     function.Push(child.Emit(state));
+
+    if (child.type == ASTNode::RETURN) {
+      returnCount += 1;
+    }
   }
 
   return function;
@@ -472,17 +545,39 @@ std::vector<WATExpr> ASTNode::EmitFunctionCall(State &state) const {
   return out;
 }
 
-std::vector<WATExpr> ASTNode::EmitBuiltInFunctionCall(State & state) const {
-  std::vector<WATExpr> out{};
-  if (literal == "size"){
+std::vector<WATExpr> ASTNode::EmitBuiltInFunctionCall(State &state) const {
+  if (literal == "size") {
     assert(children.size() == 1);
-    std::vector<WATExpr> child_exprs = children[0].Emit(state);
-    for (auto expr : child_exprs) {
-      out.push_back(expr);
+    return WATExpr("call", Variable("getStringLength"))
+        .Push(children[0].Emit(state));
+  } else if (literal == "sqrt") {
+    assert(children.size() == 1);
+    std::vector<WATExpr> left = children.at(0).Emit(state);
+    VarType left_type = children.at(0).ReturnType(state.table);
+    WATExpr sqrt{"f64.sqrt", std::move(left)};
+    if (left_type == VarType::INT) {
+      sqrt.Child("f64.convert_i32_s");
     }
-    out.emplace_back("call", Variable("getStringLength"));
-    return out;
-  } else {
-    ErrorNoLine("Unknown built in function");
+    return sqrt;
   }
+  assert(false);
+}
+
+std::vector<WATExpr> ASTNode::EmitStringIndex(State &state) const {
+  assert(children.size() == 2);
+  WATExpr out{"call", Variable("index_str")};
+
+  std::vector<WATExpr> child_exprs = children.at(0).Emit(state);
+  VarType child_type = children.at(0).ReturnType(state.table);
+
+  std::vector<WATExpr> index = children.at(1).Emit(state);
+  VarType index_type = children.at(1).ReturnType(state.table);
+
+  if (index_type != VarType::INT || child_type != VarType::STRING) {
+    ErrorNoLine("Invalid: Attempting index into a string incorrectly.");
+  }
+
+  out.Push(std::move(child_exprs));
+  out.Push(std::move(index));
+  return out;
 }

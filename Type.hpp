@@ -8,14 +8,7 @@ class Value;
 
 class VarType {
 public:
-  enum TypeId {
-    UNKNOWN,
-    NONE,
-    CHAR,
-    INT,
-    DOUBLE,
-    STRING
-  };
+  enum TypeId { UNKNOWN, NONE, CHAR, INT, DOUBLE, STRING };
 
 private:
   static TypeId TypeFromValue(Value const &value);
