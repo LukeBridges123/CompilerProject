@@ -253,6 +253,7 @@ std::vector<WATExpr> ASTNode::EmitAssign(State &state, bool chain) const {
     rvalue = children.at(1).Emit(state);
   }
 
+
   if (children.at(0).type == IDENTIFIER) {
     VarType left_type = children.at(0).ReturnType(state.table);
     VarType right_type = children.at(1).ReturnType(state.table);
@@ -283,6 +284,7 @@ std::vector<WATExpr> ASTNode::EmitAssign(State &state, bool chain) const {
         .Push(std::move(rvalue));
   }
   assert(false);
+
 }
 
 std::vector<WATExpr>
@@ -353,13 +355,29 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     return {test_first, cond};
   }
 
-  if (left_type == VarType::STRING && right_type == VarType::STRING &&
-      literal == "+") {
-    WATExpr out{"call", Variable("addTwo_str")};
-    out.Push(std::move(left));
-    out.Push(std::move(right));
+  if (left_type == VarType::STRING && right_type == VarType::STRING) {
+    if (literal == "+") {
+      WATExpr out{"call", Variable("addTwo_str")};
+      out.Push(std::move(left));
+      out.Push(std::move(right));
 
-    return out;
+      return out;
+    } else if (literal == "==") {
+      WATExpr out{"call", Variable("str_eq")};
+      out.Push(std::move(left));
+      out.Push(std::move(right));
+      return out;
+    } else if (literal == "!=") {
+      WATExpr eq{"call", Variable("str_eq")};
+      eq.Push(std::move(left));
+      eq.Push(std::move(right));
+      WATExpr out{"i32.eq"};
+      out.Child(std::move(eq));
+      out.Child(WATExpr{"i32.const", "0"});
+      return out;
+    } else {
+      ErrorNoLine("Unknown operation on two strings");
+    }
   } else if (left_type == VarType::STRING || right_type == VarType::STRING) {
     if (left_type == VarType::INT && literal == "*") {
       return EmitSpecialMult(std::move(right), std::move(left),
@@ -367,25 +385,26 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
     } else if (right_type == VarType::INT && literal == "*") {
       return EmitSpecialMult(std::move(left), std::move(right),
                              VarType::STRING);
-    }
+    } else if (literal == "+") {
 
-    WATExpr chr{"call", Variable("charTo_str")};
-    WATExpr out{"call", Variable("addTwo_str")};
-    if (left_type == VarType::CHAR) {
-      chr.Push(std::move(left));
-      out.Push(chr);
-      // chr.Push(std::move(left));
-      out.Push(std::move(right));
-    } else if (right_type == VarType::CHAR) {
-      // chr.Push(std::move(right));
-      out.Push(std::move(left));
-      chr.Push(std::move(right)); // reordered -- it matters which argument to
+      WATExpr chr{"call", Variable("charTo_str")};
+      WATExpr out{"call", Variable("addTwo_str")};
+      if (left_type == VarType::CHAR) {
+        chr.Push(std::move(left));
+        out.Push(chr);
+        // chr.Push(std::move(left));
+        out.Push(std::move(right));
+      } else if (right_type == VarType::CHAR) {
+        // chr.Push(std::move(right));
+        out.Push(std::move(left));
+        chr.Push(std::move(right)); // reordered -- it matters which argument to
                                   // addTwo_str goes first, and presumably the
                                   // left arg always goes before the right
-      out.Push(chr);
-    } else {
-      ErrorNoLine("Invalid action: Cannot perfom addition with a string and a "
-                  "non-string!");
+        out.Push(chr);
+      } else {
+        ErrorNoLine("Invalid action: Cannot perfom addition with a string and a "
+                    "non-string!");
+      }
     }
     return out;
   } else if (left_type == VarType::CHAR && right_type == VarType::INT &&
