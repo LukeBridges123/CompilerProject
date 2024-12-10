@@ -160,8 +160,6 @@
   )
   (return (i32.const 1))
 )
-=======
-  (i32.store8))
 
 (func $multply_char (param $char i32) (param $times i32) (result i32)
   (local $res_val i32)   ;; Return value
@@ -256,4 +254,3 @@
     (local.get $char))
 
   (local.get $char))
-

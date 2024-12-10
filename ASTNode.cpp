@@ -284,7 +284,7 @@ std::vector<WATExpr> ASTNode::EmitAssign(State &state, bool chain) const {
         .Push(std::move(rvalue));
   }
   assert(false);
-
+  
 }
 
 std::vector<WATExpr>
@@ -405,8 +405,8 @@ std::vector<WATExpr> ASTNode::EmitOperation(State &state) const {
         ErrorNoLine("Invalid action: Cannot perfom addition with a string and a "
                     "non-string!");
       }
+      return out;
     }
-    return out;
   } else if (left_type == VarType::CHAR && right_type == VarType::INT &&
              literal == "*") {
     return EmitSpecialMult(std::move(left), std::move(right), VarType::CHAR);
